@@ -13,12 +13,13 @@ would be appropriate, but that's put off until a later revision).
 first, we track which areas are active w.r.t objects. this consists of a set of per-player mapblocks, and some
 additional mapblocks which are force-loaded. for the purpose of this discussion, i'll just call these active
 blocks (note: that means something different to minetest itself). we track a set of blocks around each player -
-the same block might be associated w/ multiple players.
+the same block might be associated w/ multiple players. we also track the "global" loaded status - is this block loaded
+by *any* player? ultimately, this is what we care about whether we should spawn a mob in a specific mapblock.
 
-from these, we gradually build a collection of positions where mobs can spawn. as the active positions change, these
-are deactivated, and eventually removed from the cache entirely.
+from this data, we gradually build a collection of positions where mobs can spawn. as the active positions change, these
+are deactivated, and eventually removed from the cache entirely (based on distance from players or time since active).
 
-then, for each mob, after some interval, if certain conditions are met, we add one of the mobs to the world.
+then, for each mob, after some interval, if certain conditions are met, we add one (or more) of the mobs to the world.
 
 == the update pipeline ==
 
@@ -30,5 +31,5 @@ updates to a block as reported by the engine will also trigger the removal of ca
 
 = TODO =
 
-track timestamps for updated blocks - don't bother re-calculating something if it's changed recently, someone might be
-building or digging there.
+track timestamps for updated blocks? we can use a 5.7.0 callback (`register_on_mapblocks_changed`) to remove spawn
+positions.

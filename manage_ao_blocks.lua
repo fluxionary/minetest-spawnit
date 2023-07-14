@@ -1,8 +1,6 @@
 local active_block_range = tonumber(minetest.settings:get("active_block_range")) or 4
 local active_object_send_range_blocks = tonumber(minetest.settings:get("active_object_send_range_blocks")) or 8
 
-local is_empty = futil.table.is_empty
-local setdefault = futil.table.setdefault
 local get_blockpos = futil.vector.get_blockpos
 local is_blockpos_inside_world_bounds = futil.vector.is_blockpos_inside_world_bounds
 
@@ -11,8 +9,14 @@ local Block = spawnit.Block
 
 local get_fov = spawnit.util.get_fov
 local is_block_in_sight = spawnit.util.is_block_in_sight
+local is_too_far = spawnit.util.is_too_far
 
-spawnit.visibility_by_hpos = {}
+spawnit.visibility_by_hpos = futil.DefaultTable(function()
+	return futil.Set()
+end)
+spawnit.nearby_players_by_hpos = futil.DefaultTable(function()
+	return futil.Set()
+end)
 spawnit.nearby_blocks_by_player_name = {}
 
 minetest.register_on_joinplayer(function(player)
@@ -24,12 +28,15 @@ minetest.register_on_leaveplayer(function(player)
 	local nearby_blocks = spawnit.nearby_blocks_by_player_name[player_name]
 	for hpos in pairs(nearby_blocks) do
 		local visibility = spawnit.visibility_by_hpos[hpos]
-		if visibility then
-			visibility[player_name] = nil
-			if is_empty(visibility) then
-				spawnit.visibility_by_hpos[hpos] = nil
-				-- TODO: need to also purge cached spawn positions
-			end
+		visibility:remove(player_name)
+		if #visibility == 0 then
+			spawnit.visibility_by_hpos[hpos] = nil
+		end
+		local nearby = spawnit.nearby_players_by_hpos[hpos]
+		nearby:remove(player_name)
+		if #nearby == 0 then
+			spawnit.nearby_players_by_hpos[hpos] = nil
+			spawnit.clear_spawns(hpos)
 		end
 	end
 	spawnit.nearby_blocks_by_player_name[player_name] = nil
@@ -62,7 +69,6 @@ local function get_ao_blocks(player)
 	local look_dir = player:get_look_dir()
 	local properties = player:get_properties()
 	local eye_height = properties.eye_height
-	--local eye_offset = player:get_eye_offset()  -- this isn't actually used in computation of active object stuff
 	local eye_pos = player_pos:offset(0, eye_height, 0)
 	local eye_blockpos = get_blockpos(eye_pos)
 	local fov = get_fov(player)
@@ -80,18 +86,19 @@ local function get_ao_blocks(player)
 			end
 		end
 	end
-end
 
-local function is_too_far(player_pos, block_hpos)
-	error("TODO: implement")
+	return blocks_by_hpos
 end
 
 local player_i = 1
 futil.register_globalstep({
-	name = "spawnit:update_ao_blocks",
+	name = "spawnit:update_player_ao",
 	period = s.update_positions_period,
 	func = function()
 		local players = minetest.get_connected_players()
+		if #players == 0 then
+			return
+		end
 		player_i = (player_i % #players) + 1
 		local player = players[player_i]
 		local player_name = player:get_player_name()
@@ -101,43 +108,82 @@ futil.register_globalstep({
 		local need_to_find_spawn_poss = {}
 
 		for hpos, block in pairs(nearby_blocks) do
-			local visibility = setdefault(spawnit.visibility_by_hpos, hpos, {})
+			local visibility = spawnit.visibility_by_hpos[hpos]
+			local nearby = spawnit.nearby_players_by_hpos[hpos]
 
 			if new_ao_blocks[hpos] then
-				block:set_active(true)
+				block:set_active_objects(true)
 				new_ao_blocks[hpos] = nil -- already accounted for
-				if not spawnit.spawn_poss_by_hash[hpos] then
+				if not spawnit.spawn_poss_by_hpos[hpos] then
 					need_to_find_spawn_poss[#need_to_find_spawn_poss + 1] = hpos
 				end
-				visibility[player_name] = true
+				visibility:add(player_name)
+				nearby:add(player_name)
 			else
-				block:set_active(false)
-				visibility[player_name] = nil
-				if is_empty(visibility) then
+				block:set_active_objects(false)
+				visibility:discard(player_name)
+				if #visibility == 0 then
 					spawnit.visibility_by_hpos[hpos] = nil
 				end
 				if is_too_far(player_pos, hpos) then
 					nearby_blocks[hpos] = nil
-					-- TODO: need to also purge cached spawn positions
+					nearby:remove(player_name)
+					if #nearby == 0 then
+						spawnit.clear_spawns(hpos)
+					end
 				end
 			end
 		end
 
 		for hpos, block in pairs(new_ao_blocks) do
-			if not spawnit.spawn_poss_by_hash[hpos] then
+			if not spawnit.spawn_poss_by_hpos[hpos] then
 				need_to_find_spawn_poss[#need_to_find_spawn_poss + 1] = hpos
 			end
 			nearby_blocks[hpos] = block
-			local visibility = setdefault(spawnit.visibility_by_hpos, hpos, {})
-			visibility[player_name] = true
+			local visibility = spawnit.visibility_by_hpos[hpos]
+			visibility:add(player_name)
+			local nearby = spawnit.nearby_players_by_hpos[hpos]
+			nearby:add(player_name)
 		end
-		if #need_to_find_spawn_poss > 0 then
-			local block = need_to_find_spawn_poss[math.random(#need_to_find_spawn_poss)]
-			spawnit.find_spawn_poss(block)
+		for i = 1, #need_to_find_spawn_poss do
+			spawnit.find_spawn_poss(nearby_blocks[need_to_find_spawn_poss[i]])
 		end
 	end,
 })
 
-function spawnit.is_ao(block_hpos)
-	return spawnit.visibility_by_hpos[block_hpos] ~= nil
-end
+local previous_forceloaded = futil.Set()
+futil.register_globalstep({
+	name = "spawnit:update_forceloaded_ao",
+	period = s.update_positions_period,
+	func = function()
+		local forceloaded = spawnit.get_forceloaded()
+		local need_to_find_spawn_poss = {}
+		for hpos in (previous_forceloaded - forceloaded):iterate() do
+			local visibility = spawnit.visibility_by_hpos[hpos]
+			visibility:remove("<FORCELOAD>")
+			if #visibility == 0 then
+				spawnit.visibility_by_hpos[hpos] = nil
+			end
+			local nearby = spawnit.nearby_players_by_hpos[hpos]
+			nearby:remove("<FORCELOAD>")
+			if #nearby == 0 then
+				spawnit.clear_spawns(hpos)
+			end
+		end
+		for hpos in (forceloaded - previous_forceloaded):iterate() do
+			if not spawnit.spawn_poss_by_hpos[hpos] then
+				need_to_find_spawn_poss[#need_to_find_spawn_poss + 1] = hpos
+			end
+			local visibility = spawnit.visibility_by_hpos[hpos]
+			visibility:add("<FORCELOAD>")
+			local nearby = spawnit.nearby_players_by_hpos[hpos]
+			nearby:add("<FORCELOAD>")
+		end
+		for i = 1, #need_to_find_spawn_poss do
+			local blockpos = minetest.get_position_from_hash(need_to_find_spawn_poss[i])
+			local block = Block(blockpos, true)
+			spawnit.find_spawn_poss(block)
+		end
+		previous_forceloaded = forceloaded
+	end,
+})

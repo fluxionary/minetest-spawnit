@@ -1,0 +1,3 @@
+spawnit:update_positions_period () float 1
+spawnit:spawn_mobs_period () float 1
+spawnit:too_far_ratio () float 2

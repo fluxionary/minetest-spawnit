@@ -1,5 +1,17 @@
-futil.check_version({ year = 2023, month = 7, day = 12 })
+futil.check_version({ year = 2023, month = 7, day = 14 })
 
 spawnit = fmod.create()
 
-minetest.register_async_dofile(spawnit.modpath .. DIR_DELIM .. "async_env.lua")
+spawnit.dofile("util")
+
+spawnit.dofile("block_class")
+spawnit.dofile("spawn_positions_class")
+
+spawnit.dofile("manage_ao_blocks")
+spawnit.dofile("manage_forceload")
+spawnit.dofile("manage_spawn_positions")
+spawnit.dofile("mob_counter")
+spawnit.dofile("register")
+spawnit.dofile("spawn_mobs")
+
+spawnit.async_dofile("async_env")

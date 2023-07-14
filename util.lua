@@ -1,5 +1,12 @@
-local MAPBLOCK_SIZE = 16 -- effectively hard-coded, not sure how to query it if it's not...
-local BLOCK_MAX_RADIUS = math.sqrt(3) / 2 * MAPBLOCK_SIZE
+local MAP_BLOCKSIZE = minetest.MAP_BLOCKSIZE
+local BLOCK_MAX_RADIUS = math.sqrt(3) / 2 * MAP_BLOCKSIZE
+
+local active_block_range = tonumber(minetest.settings:get("active_block_range")) or 4
+local active_object_send_range_blocks = tonumber(minetest.settings:get("active_object_send_range_blocks")) or 8
+
+local too_far = math.sqrt(3) * MAP_BLOCKSIZE * (math.max(active_block_range, active_object_send_range_blocks) + 1)
+
+local s = spawnit.settings
 
 spawnit.util = {}
 
@@ -64,16 +71,90 @@ function spawnit.util.should_spawn(def, period, num_players)
 		return false
 	end
 
+	local tod = minetest.get_timeofday()
+	if def.min_time_of_day < def.max_time_of_day then
+		if tod < def.min_time_of_day or def.max_time_of_day < tod then
+			return false
+		end
+	else
+		if tod > def.min_time_of_day or def.max_time_of_day > tod then
+			return false
+		end
+	end
+
 	return true
 end
 
-function spawnit.util.pick_a_cluster(def)
-	error("TODO: implement")
+local function check_pos(def, pos)
+	local light = minetest.get_node_light(pos)
+	if not light then
+		-- indicates location isn't loaded
+		return false
+	end
+
+	if def.min_light > light or light > def.max_light then
+		return false
+	end
+
+	-- protection could have changed, so check again
+	if (not def.spawn_in_protected) and minetest.is_protected(pos, def.entity) then
+		return false
+	end
+
+	if def.check_pos and not def.check_pos(pos) then
+		return false
+	end
+
+	return true
+end
+
+function spawnit.util.pick_a_cluster(def_index, def)
+	local hposs = spawnit.hposs_by_def[def_index]
+	if not hposs then
+		-- nowhere to spawn
+		return {}
+	end
+	local hposs_t = {}
+	for hpos in pairs(hposs) do
+		hposs_t[#hposs + 1] = hpos
+	end
+	if #hposs_t == 0 then
+		-- nowhere to spawn
+		return {}
+	end
+	local poss = {}
+	for _ = 1, 5 do
+		local hpos = hposs_t[math.random(#hposs_t)]
+		local spawn_poss = spawnit.spawn_poss_by_hpos[hpos]
+		if spawn_poss then
+			local possible_poss = spawn_poss:get_poss(def_index)
+			local filtered = {}
+			for i = 1, #possible_poss do
+				local pos = possible_poss[i]
+				if check_pos(def, pos) then
+					filtered[#filtered + 1] = pos
+				end
+			end
+			if #filtered >= def.cluster then
+				poss = filtered
+				break
+			elseif #filtered > #poss then
+				poss = filtered
+			end
+		end
+	end
+	if #poss <= def.cluster then
+		return poss
+	elseif def.cluster == 1 then
+		return { futil.random.choice(poss) }
+	else
+		return futil.random.sample(poss, def.cluster)
+	end
 end
 
 -- https://github.com/minetest/minetest/blob/4a14a187991c25e8942a7c032b74c468872a51c7/src/util/numeric.cpp#L117-L171
 function spawnit.util.is_block_in_sight(block, camera_pos, camera_dir, camera_fov, r_blocks)
-	local r_nodes = r_blocks * MAPBLOCK_SIZE
+	local r_nodes = r_blocks * MAP_BLOCKSIZE
 	local center = block:get_center()
 	local relative = center - camera_pos
 	local d = math.max(0, relative:length() - BLOCK_MAX_RADIUS)
@@ -98,4 +179,28 @@ function spawnit.util.get_fov(player)
 		fov = 72
 	end
 	return futil.math.deg2rad(fov)
+end
+
+function spawnit.util.is_too_far(player_pos, block_hpos)
+	local blockpos = minetest.get_position_from_hash(block_hpos)
+	local block = spawnit.Block(blockpos)
+	return player_pos:distance(block:get_center()) > s.too_far_ratio * too_far
+end
+
+function spawnit.util.final_check(def, pos)
+	if def.max_in_area then
+		local count = 0
+		local objs = minetest.get_objects_in_area(vector.subtract(pos, def.radius), vector.add(pos, def.radius))
+		for i = 1, #objs do
+			local e = objs[i]:get_luaentity()
+			if e and e.name == def.entity then
+				count = count + 1
+				if count >= def.max_in_area then
+					return false
+				end
+			end
+		end
+	end
+
+	return true
 end

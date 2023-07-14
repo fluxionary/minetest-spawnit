@@ -16,7 +16,7 @@ spawnit.register({
 	min_light = 0,
 	max_light = 15,
 	min_time_of_day = .75,  -- 0/1 is midnight, 0.25 is dawn-ish, 0.5 is noon, .75 is dusk-ish
-	max_time_of_day = .25,
+	max_time_of_day = .25,  -- set min to 0, and max to 1, to indicate any time (default)
 	spawn_in_protected = true,
 	min_player_distance = 12,
 	max_player_distance = nil,
