@@ -1,3 +1,5 @@
+local CALCULATING = "calculating"
+
 spawnit.spawn_poss_by_hpos = {}
 spawnit.hposs_by_def = futil.DefaultTable(function()
 	return futil.Set()
@@ -11,7 +13,7 @@ function spawnit.clear_spawns(hpos)
 			for def_index in pairs(spawn_poss._poss_by_def) do -- TODO don't reference internal data, create some method
 				local hposs = spawnit.hposs_by_def[def_index]
 				hposs:discard(hpos)
-				if #hposs == 0 then
+				if hposs:is_empty() then
 					spawnit.hposs_by_def[def_index] = nil
 				end
 			end
@@ -70,14 +72,19 @@ end
 function spawnit.find_spawn_poss(block)
 	local blockpos = block:get_pos()
 	local hpos = block:hash()
+
+	if spawnit.spawn_poss_by_hpos[hpos] then
+		return
+	end
+
 	local block_min, block_max = block:get_bounds()
 	local mob_extents = spawnit.mob_extents
 	local pmin = vector.offset(block_min, mob_extents[1], mob_extents[2], mob_extents[3])
 	local pmax = vector.offset(block_max, mob_extents[4], mob_extents[5], mob_extents[6])
 
 	local function callback(poss_by_def)
-		-- if this already got computed somehow, or removed, leave it alone.
-		if spawnit.spawn_poss_by_hpos[hpos] ~= "calcuating" then
+		if spawnit.spawn_poss_by_hpos[hpos] ~= CALCULATING then
+			-- if this already got computed somehow, or removed, leave it alone.
 			return
 		end
 
@@ -89,7 +96,7 @@ function spawnit.find_spawn_poss(block)
 		end
 	end
 
-	spawnit.spawn_poss_by_hpos[hpos] = "calculating"
+	spawnit.spawn_poss_by_hpos[hpos] = CALCULATING
 
 	minetest.handle_async(
 		async_call,

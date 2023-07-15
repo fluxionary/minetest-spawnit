@@ -39,13 +39,13 @@ function spawnit.register(def)
 	-- default values
 	def.type = def.type or "animal"
 	def.cluster = def.cluster or 1
-	assert(def.cluster > 1)
+	assert(def.cluster >= 1)
 	def.chance = def.chance or 300
 	assert(def.chance > 0)
 	def.per_player = def.per_player or false
-	def.biome = { ".*" }
+	def.biome = { ".*" } -- TODO we're not using this
 	def.on = def.on or { "node" }
-	def.within = def.within or { "not walkable" }
+	def.within = def.within or { "breathable" }
 	-- TODO: verify that biome, on, and within are valid
 	def.min_y = def.min_y or MIN_Y
 	def.max_y = def.max_y or MAX_Y

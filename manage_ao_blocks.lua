@@ -1,3 +1,5 @@
+local FORCELOAD = "<FORCELOAD>"
+
 local active_block_range = tonumber(minetest.settings:get("active_block_range")) or 4
 local active_object_send_range_blocks = tonumber(minetest.settings:get("active_object_send_range_blocks")) or 8
 
@@ -29,12 +31,12 @@ minetest.register_on_leaveplayer(function(player)
 	for hpos in pairs(nearby_blocks) do
 		local visibility = spawnit.visibility_by_hpos[hpos]
 		visibility:remove(player_name)
-		if #visibility == 0 then
+		if visibility:is_empty() then
 			spawnit.visibility_by_hpos[hpos] = nil
 		end
 		local nearby = spawnit.nearby_players_by_hpos[hpos]
 		nearby:remove(player_name)
-		if #nearby == 0 then
+		if nearby:is_empty() then
 			spawnit.nearby_players_by_hpos[hpos] = nil
 			spawnit.clear_spawns(hpos)
 		end
@@ -122,13 +124,13 @@ futil.register_globalstep({
 			else
 				block:set_active_objects(false)
 				visibility:discard(player_name)
-				if #visibility == 0 then
+				if visibility:is_empty() then
 					spawnit.visibility_by_hpos[hpos] = nil
 				end
 				if is_too_far(player_pos, hpos) then
 					nearby_blocks[hpos] = nil
 					nearby:remove(player_name)
-					if #nearby == 0 then
+					if nearby:is_empty() then
 						spawnit.clear_spawns(hpos)
 					end
 				end
@@ -146,7 +148,11 @@ futil.register_globalstep({
 			nearby:add(player_name)
 		end
 		for i = 1, #need_to_find_spawn_poss do
-			spawnit.find_spawn_poss(nearby_blocks[need_to_find_spawn_poss[i]])
+			local block = nearby_blocks[need_to_find_spawn_poss[i]]
+			local pos = block:get_min()
+			if minetest.compare_block_status(pos, "active") or minetest.compare_block_status(pos, "loaded") then
+				spawnit.find_spawn_poss(block)
+			end
 		end
 	end,
 })
@@ -160,13 +166,13 @@ futil.register_globalstep({
 		local need_to_find_spawn_poss = {}
 		for hpos in (previous_forceloaded - forceloaded):iterate() do
 			local visibility = spawnit.visibility_by_hpos[hpos]
-			visibility:remove("<FORCELOAD>")
-			if #visibility == 0 then
+			visibility:remove(FORCELOAD)
+			if visibility:is_empty() then
 				spawnit.visibility_by_hpos[hpos] = nil
 			end
 			local nearby = spawnit.nearby_players_by_hpos[hpos]
-			nearby:remove("<FORCELOAD>")
-			if #nearby == 0 then
+			nearby:remove(FORCELOAD)
+			if nearby:is_empty() then
 				spawnit.clear_spawns(hpos)
 			end
 		end
@@ -175,14 +181,17 @@ futil.register_globalstep({
 				need_to_find_spawn_poss[#need_to_find_spawn_poss + 1] = hpos
 			end
 			local visibility = spawnit.visibility_by_hpos[hpos]
-			visibility:add("<FORCELOAD>")
+			visibility:add(FORCELOAD)
 			local nearby = spawnit.nearby_players_by_hpos[hpos]
-			nearby:add("<FORCELOAD>")
+			nearby:add(FORCELOAD)
 		end
 		for i = 1, #need_to_find_spawn_poss do
 			local blockpos = minetest.get_position_from_hash(need_to_find_spawn_poss[i])
 			local block = Block(blockpos, true)
-			spawnit.find_spawn_poss(block)
+			local pos = block:get_min()
+			if minetest.compare_block_status(pos, "active") or minetest.compare_block_status(pos, "loaded") then
+				spawnit.find_spawn_poss(block)
+			end
 		end
 		previous_forceloaded = forceloaded
 	end,

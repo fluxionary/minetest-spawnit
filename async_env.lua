@@ -14,6 +14,8 @@ local spawns_on_ground = spawnit.util.spawns_on_ground
 
 local walkable_cids
 local not_walkable_cids
+local breathable_cids
+local breathable_airlike_cids
 local node_cids -- walkable full nodes
 local cids_by_group = DefaultTable(function()
 	return Set()
@@ -21,19 +23,27 @@ end)
 
 local function init_cids()
 	walkable_cids = Set()
-	not_walkable_cids = Set()
 	node_cids = Set()
+	not_walkable_cids = Set()
+	breathable_cids = Set()
+	breathable_airlike_cids = Set()
 	for name, def in pairs(minetest.registered_nodes) do
 		local cid = get_content_id(name)
-		if def.walkable then
+		if def.walkable ~= false then -- TODO apparently there is a bug where default values in a node def are not transferred
 			walkable_cids:add(cid)
-			if def.drawtype == "nodebox" and is_full_nodebox(def.node_box) then
+			if def.drawtype == "nodebox" and def.node_box and is_full_nodebox(def.node_box) then
 				node_cids:add(cid)
 			elseif (not def.collision_box) or is_full_nodebox(def.collision_box) then
 				node_cids:add(cid)
 			end
 		else
 			not_walkable_cids:add(cid)
+			if (def.drowing or 0) == 0 and (def.damage_per_second or 0) == 0 then
+				breathable_cids:add(cid)
+				if (def.drawtype or "normal") == "airlike" then
+					breathable_airlike_cids:add(cid)
+				end
+			end
 		end
 		for group in pairs(def.groups or {}) do
 			cids_by_group[group]:add(cid)
@@ -50,10 +60,14 @@ local function build_can_be(nodes)
 			end
 		elseif name == "walkable" then
 			can_be:update(walkable_cids)
-		elseif name == "not walkable" then
-			can_be:update(not_walkable_cids)
 		elseif name == "node" then
 			can_be:update(node_cids)
+		elseif name == "not walkable" then
+			can_be:update(not_walkable_cids)
+		elseif name == "breathable" then
+			can_be:update(breathable_cids)
+		elseif name == "breathable airlike" then
+			can_be:update(breathable_airlike_cids)
 		else
 			local group = name:match("^group:(.+)$")
 			if group then
@@ -86,7 +100,8 @@ function spawnit.is_valid_position(def_index, def, data, va, i)
 	local in_entity_indices = get_in_entity_indices(def, va, i)
 	for j = 1, #in_entity_indices do
 		local index = in_entity_indices[j]
-		if not can_be_in(data[index]) then
+		local cid = data[index]
+		if not can_be_in(cid) then
 			return false
 		end
 	end
@@ -101,7 +116,8 @@ function spawnit.is_valid_position(def_index, def, data, va, i)
 		local under_entity_indices = get_under_entity_indices(def, va, i)
 		for j = 1, #under_entity_indices do
 			local index = under_entity_indices[j]
-			if not can_be_on(data[index]) then
+			local cid = data[index]
+			if not can_be_on(cid) then
 				return false
 			end
 		end

@@ -1,3 +1,5 @@
+local f = string.format
+
 local MAP_BLOCKSIZE = minetest.MAP_BLOCKSIZE
 local BLOCK_MAX_RADIUS = math.sqrt(3) / 2 * MAP_BLOCKSIZE
 
@@ -59,26 +61,26 @@ function spawnit.util.should_spawn(def, period, num_players)
 	local r = math.random()
 	if def.per_player then
 		if r >= (period * num_players) / def.chance then
-			return false
+			return false, f("%s >= %s (1)", r, (period * num_players) / def.chance)
 		end
 	else
 		if r >= period / def.chance then
-			return false
+			return false, f("%s >= %s (2)", r, period / def.chance)
 		end
 	end
 
-	if def.max_active and spawnit.get_active_count(def.entity) >= def.max_active then
-		return false
+	if def.max_active and def.max_active > 0 and spawnit.get_active_count(def.entity) >= def.max_active then
+		return false, f("too many active: %s >= %s", spawnit.get_active_count(def.entity), def.max_active)
 	end
 
 	local tod = minetest.get_timeofday()
 	if def.min_time_of_day < def.max_time_of_day then
 		if tod < def.min_time_of_day or def.max_time_of_day < tod then
-			return false
+			return false, "wrong time of day (1)"
 		end
 	else
 		if tod > def.min_time_of_day or def.max_time_of_day > tod then
-			return false
+			return false, "wrong time of day (2)"
 		end
 	end
 
@@ -109,37 +111,35 @@ local function check_pos(def, pos)
 end
 
 function spawnit.util.pick_a_cluster(def_index, def)
-	local hposs = spawnit.hposs_by_def[def_index]
-	if not hposs then
+	local hposs_set = spawnit.hposs_by_def[def_index]
+	if not hposs_set or hposs_set:size() == 0 then
 		-- nowhere to spawn
 		return {}
 	end
-	local hposs_t = {}
-	for hpos in pairs(hposs) do
-		hposs_t[#hposs + 1] = hpos
-	end
-	if #hposs_t == 0 then
-		-- nowhere to spawn
-		return {}
+	local hposs_list = {}
+	for hpos in hposs_set:iterate() do
+		hposs_list[#hposs_list + 1] = hpos
 	end
 	local poss = {}
 	for _ = 1, 5 do
-		local hpos = hposs_t[math.random(#hposs_t)]
+		local hpos = hposs_list[math.random(#hposs_list)]
 		local spawn_poss = spawnit.spawn_poss_by_hpos[hpos]
 		if spawn_poss then
 			local possible_poss = spawn_poss:get_poss(def_index)
-			local filtered = {}
-			for i = 1, #possible_poss do
-				local pos = possible_poss[i]
-				if check_pos(def, pos) then
-					filtered[#filtered + 1] = pos
+			if possible_poss and #possible_poss > 0 then
+				local filtered = {}
+				for i = 1, #possible_poss do
+					local pos = possible_poss[i]
+					if check_pos(def, pos) then
+						filtered[#filtered + 1] = pos
+					end
 				end
-			end
-			if #filtered >= def.cluster then
-				poss = filtered
-				break
-			elseif #filtered > #poss then
-				poss = filtered
+				if #filtered >= def.cluster then
+					poss = filtered
+					break
+				elseif #filtered > #poss then
+					poss = filtered
+				end
 			end
 		end
 	end
@@ -188,9 +188,12 @@ function spawnit.util.is_too_far(player_pos, block_hpos)
 end
 
 function spawnit.util.final_check(def, pos)
-	if def.max_in_area then
+	if def.max_in_area and def.max_in_area > 0 then
+		local radius = def.max_in_area_radius
+		local pmin = vector.subtract(pos, radius)
+		local pmax = vector.add(pos, radius)
 		local count = 0
-		local objs = minetest.get_objects_in_area(vector.subtract(pos, def.radius), vector.add(pos, def.radius))
+		local objs = minetest.get_objects_in_area(pmin, pmax)
 		for i = 1, #objs do
 			local e = objs[i]:get_luaentity()
 			if e and e.name == def.entity then

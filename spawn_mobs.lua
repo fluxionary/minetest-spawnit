@@ -11,9 +11,10 @@ futil.register_globalstep({
 	func = function(period)
 		local num_players = #minetest.get_connected_players()
 		for n, def in ipairs(spawnit.registered_spawnings) do
-			if should_spawn(def, period, num_players) then
+			local should = should_spawn(def, period, num_players)
+			if should then
 				local cluster = pick_a_cluster(n, def)
-				if cluster and #cluster > 0 then
+				if #cluster > 0 then
 					for _, pos in ipairs(cluster) do
 						if final_check(def, pos) then
 							local obj
@@ -25,6 +26,7 @@ futil.register_globalstep({
 							local spos = minetest.pos_to_string(pos)
 							if obj then
 								spawnit.log("action", "spawned %s @ %s", def.entity, spos)
+								-- TODO: remove pos from possible positions
 								if def.after_spawn then
 									def.after_spawn(pos, obj)
 								end
