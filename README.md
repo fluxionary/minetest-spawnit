@@ -2,6 +2,8 @@
 
 a mob spawning API separate from any specific mob implementation.
 
+this is currently functional but very WIP - the performance characteristics are not where i want them to be.
+
 ## usage
 
 this is an API. other mods are free to use it, but the main goal is to provide server operators with a single mechanism
