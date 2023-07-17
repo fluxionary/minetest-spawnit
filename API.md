@@ -5,12 +5,12 @@ spawnit.register({
 	entity = "mymod:my_walking_mob",
     type = "monster",  -- or "npc" or "animal", or something custom
     cluster = 1, -- maximum amount to spawn at once (cluster is within a single mapblock)
-    chance = 100, -- there will be a 1 in 100 chance of spawning a mob every second
+    chance = 100, -- there will be a 1 in 100 chance of spawning a mob per second
     per_player = false, -- if true, there will be a 1 in 100 chance of spawning a mob every second per connected player
 
-	biome = {"snow"}, -- patterns. by default, no biome preferences
 	on = {"node"}, -- any solid full node. or, list of nodes, groups, "walkable" for any solid node (incl. mesh/nodebox)
 	within = {"not walkable"},
+    near = {"any"},  -- TODO: implement
 	min_y = 0,
 	max_y = 100,
 	min_light = 0,
@@ -27,8 +27,10 @@ spawnit.register({
 
     collisionbox = nil, -- if not defined, this is inferred from the entity's definition
 
+    -- biome = { ".*" },  -- TODO: this isn't reliable anyway, maybe implement later
 	...,  -- TODO other things?
 
+    should_spawn = function()  end,
 	check_pos = function(pos) end,  -- return true to allow spawning at that position, false to disallow
 	after_spawn = function(pos, obj) end,  -- called after a mob has spawned
 })

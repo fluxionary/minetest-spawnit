@@ -1,6 +1,7 @@
 local f = string.format
 
-local spawns_on_ground = spawnit.util.spawns_on_ground
+local spawns_near_something = spawnit.util.spawns_near_something
+local spawns_on_something = spawnit.util.spawns_on_something
 
 local MINP, MAXP = futil.vector.get_world_bounds()
 local MIN_Y = MINP.y
@@ -9,20 +10,67 @@ local MAX_Y = MAXP.y
 -- extent of halo around a mapblock that we need to check to see whether mobs fit
 spawnit.mob_extents = { 0, 0, 0, 0, 0, 0 }
 
-spawnit.registered_spawnings = {}
+spawnit.registered_spawns = {}
 
-local function update_mob_extents(collisionbox, on_ground)
-	spawnit.mob_extents[1] = math.min(spawnit.mob_extents[1], math.floor(collisionbox[1] + 0.5))
-	if on_ground then
-		-- make sure we can check the node under the mob
-		spawnit.mob_extents[2] = math.min(spawnit.mob_extents[2], math.floor(collisionbox[2] + 0.5) - 1)
+local function update_mob_extents(def)
+	local collisionbox = def.collisionbox
+	if spawns_near_something(def) then
+		for i = 1, 3 do
+			spawnit.mob_extents[i] = math.max(spawnit.mob_extents[i], math.ceil(collisionbox[i] + 0.5) - 1)
+		end
+
+		for i = 4, 6 do
+			spawnit.mob_extents[i] = math.max(spawnit.mob_extents[i], math.ceil(collisionbox[i] - 0.5) + 1)
+		end
 	else
-		spawnit.mob_extents[2] = math.min(spawnit.mob_extents[2], math.floor(collisionbox[2] + 0.5))
-	end
-	spawnit.mob_extents[3] = math.min(spawnit.mob_extents[3], math.floor(collisionbox[3] + 0.5))
+		spawnit.mob_extents[1] = math.min(spawnit.mob_extents[1], math.floor(collisionbox[1] + 0.5))
+		if spawns_on_something(def) then
+			-- make sure we can check the node under the mob
+			spawnit.mob_extents[2] = math.min(spawnit.mob_extents[2], math.floor(collisionbox[2] + 0.5) - 1)
+		else
+			spawnit.mob_extents[2] = math.min(spawnit.mob_extents[2], math.floor(collisionbox[2] + 0.5))
+		end
+		spawnit.mob_extents[3] = math.min(spawnit.mob_extents[3], math.floor(collisionbox[3] + 0.5))
 
-	for i = 4, 6 do
-		spawnit.mob_extents[i] = math.max(spawnit.mob_extents[i], math.ceil(collisionbox[i] - 0.5))
+		for i = 4, 6 do
+			spawnit.mob_extents[i] = math.max(spawnit.mob_extents[i], math.ceil(collisionbox[i] - 0.5))
+		end
+	end
+end
+
+local valid_keys = futil.Set({
+	"entity",
+	"type",
+	"cluster",
+	"chance",
+	"per_player",
+	"on",
+	"within",
+	"near",
+	"min_y",
+	"max_y",
+	"min_light",
+	"max_light",
+	"min_time_of_day",
+	"max_time_of_day",
+	"spawn_in_protected",
+	"min_player_distance",
+	"max_player_distance",
+	"max_active",
+	"max_in_area",
+	"max_in_area_radius",
+	"collisionbox",
+
+	"should_spawn",
+	"check_pos",
+	"after_spawn",
+})
+
+local function validate_keys(def)
+	for key in pairs(def) do
+		if not valid_keys:contains(key) then
+			error(f("unexpected spawn definition key %s", key))
+		end
 	end
 end
 
@@ -35,6 +83,8 @@ function spawnit.register(def)
 	if not entity_def then
 		error(f("attempt to register spawning for unknown entity %s", entity))
 	end
+	validate_keys(def)
+
 	def = table.copy(def)
 	-- default values
 	def.type = def.type or "animal"
@@ -42,10 +92,10 @@ function spawnit.register(def)
 	assert(def.cluster >= 1)
 	def.chance = def.chance or 300
 	assert(def.chance > 0)
-	def.per_player = def.per_player or false
-	def.biome = { ".*" } -- TODO we're not using this
+	def.per_player = futil.coalesce(def.per_player, true)
 	def.on = def.on or { "node" }
 	def.within = def.within or { "breathable" }
+	def.near = def.near or { "any" }
 	-- TODO: verify that biome, on, and within are valid
 	def.min_y = def.min_y or MIN_Y
 	def.max_y = def.max_y or MAX_Y
@@ -74,10 +124,10 @@ function spawnit.register(def)
 		or entity_def.collisionbox
 		or { -0.5, -0.5, -0.5, 0.5, 0.5, 0.5 }
 	)
-	table.insert(spawnit.registered_spawnings, def)
+	table.insert(spawnit.registered_spawns, def)
 	if def.max_active > 0 then
 		spawnit.count_active_mobs(entity)
 	end
 
-	update_mob_extents(def.collisionbox, spawns_on_ground(def))
+	update_mob_extents(def)
 end

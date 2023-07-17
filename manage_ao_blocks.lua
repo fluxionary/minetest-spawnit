@@ -1,10 +1,10 @@
 local FORCELOAD = "<FORCELOAD>"
 
-local active_block_range = tonumber(minetest.settings:get("active_block_range")) or 4
-local active_object_send_range_blocks = tonumber(minetest.settings:get("active_object_send_range_blocks")) or 8
+local v_new = vector.new
 
 local get_blockpos = futil.vector.get_blockpos
 local is_blockpos_inside_world_bounds = futil.vector.is_blockpos_inside_world_bounds
+local Set = futil.Set
 
 local s = spawnit.settings
 local Block = spawnit.Block
@@ -13,11 +13,14 @@ local get_fov = spawnit.util.get_fov
 local is_block_in_sight = spawnit.util.is_block_in_sight
 local is_too_far = spawnit.util.is_too_far
 
+local active_block_range = tonumber(minetest.settings:get("active_block_range")) or 4
+local active_object_send_range_blocks = tonumber(minetest.settings:get("active_object_send_range_blocks")) or 8
+
 spawnit.visibility_by_hpos = futil.DefaultTable(function()
-	return futil.Set()
+	return Set()
 end)
 spawnit.nearby_players_by_hpos = futil.DefaultTable(function()
-	return futil.Set()
+	return Set()
 end)
 spawnit.nearby_blocks_by_player_name = {}
 
@@ -46,15 +49,17 @@ end)
 
 -- see `doc/active object regions.md`
 local function get_ao_blocks(player)
+	local start = os.clock()
 	local player_pos = player:get_pos()
 	local player_blockpos = get_blockpos(player_pos)
+	local x0, y0, z0 = player_blockpos.x, player_blockpos.y, player_blockpos.z
 	local blocks_by_hpos = {}
 	-- get active blocks
 	local r = active_block_range
-	for x = player_blockpos.x - r, player_blockpos.x + r do
-		for y = player_blockpos.y - r, player_blockpos.y + r do
-			for z = player_blockpos.z - r, player_blockpos.z + r do
-				local blockpos = vector.new(x, y, z)
+	for x = x0 - r, x0 + r do
+		for y = y0 - r, y0 + r do
+			for z = z0 - r, z0 + r do
+				local blockpos = v_new(x, y, z)
 				if is_blockpos_inside_world_bounds(blockpos) then
 					local block = Block(blockpos, true)
 					blocks_by_hpos[block:hash()] = block
@@ -73,12 +78,13 @@ local function get_ao_blocks(player)
 	local eye_height = properties.eye_height
 	local eye_pos = player_pos:offset(0, eye_height, 0)
 	local eye_blockpos = get_blockpos(eye_pos)
+	x0, y0, z0 = eye_blockpos.x, eye_blockpos.y, eye_blockpos.z
 	local fov = get_fov(player)
 	r = active_object_send_range_blocks
-	for x = eye_blockpos.x - r, eye_blockpos.x + r do
-		for y = eye_blockpos.y - r, eye_blockpos.y + r do
-			for z = eye_blockpos.z - r, eye_blockpos.z + r do
-				local blockpos = vector.new(x, y, z)
+	for x = x0 - r, x0 + r do
+		for y = y0 - r, y0 + r do
+			for z = z0 - r, z0 + r do
+				local blockpos = v_new(x, y, z)
 				if is_blockpos_inside_world_bounds(blockpos) then
 					local block = Block(blockpos, true)
 					if is_block_in_sight(block, eye_pos, look_dir, fov, r) then
@@ -89,18 +95,21 @@ local function get_ao_blocks(player)
 		end
 	end
 
+	spawnit.stats.get_ao_blocks_duration = spawnit.stats.get_ao_blocks_duration + (os.clock() - start)
+
 	return blocks_by_hpos
 end
 
 local player_i = 1
 futil.register_globalstep({
 	name = "spawnit:update_player_ao",
-	period = s.update_positions_period,
+	period = s.update_ao_period,
 	func = function()
 		local players = minetest.get_connected_players()
 		if #players == 0 then
 			return
 		end
+		local start = os.clock()
 		player_i = (player_i % #players) + 1
 		local player = players[player_i]
 		local player_name = player:get_player_name()
@@ -131,6 +140,7 @@ futil.register_globalstep({
 					nearby_blocks[hpos] = nil
 					nearby:remove(player_name)
 					if nearby:is_empty() then
+						spawnit.nearby_players_by_hpos[hpos] = nil
 						spawnit.clear_spawns(hpos)
 					end
 				end
@@ -154,14 +164,17 @@ futil.register_globalstep({
 				spawnit.find_spawn_poss(block)
 			end
 		end
+
+		spawnit.stats.ao_calc_duration = spawnit.stats.ao_calc_duration + (os.clock() - start)
 	end,
 })
 
-local previous_forceloaded = futil.Set()
+local previous_forceloaded = Set()
 futil.register_globalstep({
 	name = "spawnit:update_forceloaded_ao",
-	period = s.update_positions_period,
+	period = s.update_ao_period,
 	func = function()
+		local start = os.clock()
 		local forceloaded = spawnit.get_forceloaded()
 		local need_to_find_spawn_poss = {}
 		for hpos in (previous_forceloaded - forceloaded):iterate() do
@@ -194,5 +207,7 @@ futil.register_globalstep({
 			end
 		end
 		previous_forceloaded = forceloaded
+
+		spawnit.stats.ao_calc_duration = spawnit.stats.ao_calc_duration + (os.clock() - start)
 	end,
 })

@@ -27,13 +27,13 @@ minetest.register_on_mapblocks_changed(function(modified_blocks, modified_block_
 	end
 end)
 
--- executed in the async environment
-local function async_call(vm, block_min, block_max, registered_spawnings)
+-- NOTICE: executed in the async environment, where the namespace is different!
+local function async_call(vm, block_min, block_max, registered_spawns)
 	local va = VoxelArea(vm:get_emerged_area())
 	local data = vm:get_data()
 
 	local poss_by_def = {}
-	for def_index, def in ipairs(registered_spawnings) do
+	for def_index, def in ipairs(registered_spawns) do
 		local positions = {}
 		for i in va:iterp(block_min, block_max) do
 			if spawnit.is_valid_position(def_index, def, data, va, i) then
@@ -50,7 +50,7 @@ end
 
 local function remove_protected_positions(poss_by_def)
 	for df_index, positions in pairs(poss_by_def) do
-		local def = spawnit.registered_spawnings[df_index]
+		local def = spawnit.registered_spawns[df_index]
 		local entity = def.entity
 		if not def.spawn_in_protected then
 			local filtered = {}
@@ -88,12 +88,14 @@ function spawnit.find_spawn_poss(block)
 			return
 		end
 
+		local start = os.clock()
 		remove_protected_positions(poss_by_def)
 		local spawn_poss = spawnit.SpawnPositions(blockpos, poss_by_def)
 		spawnit.spawn_poss_by_hpos[hpos] = spawn_poss
 		for def_index in pairs(poss_by_def) do
 			spawnit.hposs_by_def[def_index]:add(hpos)
 		end
+		spawnit.stats.async_callback_duration = spawnit.stats.async_callback_duration + (os.clock() - start)
 	end
 
 	spawnit.spawn_poss_by_hpos[hpos] = CALCULATING
@@ -104,6 +106,6 @@ function spawnit.find_spawn_poss(block)
 		VoxelManip(pmin, pmax),
 		block_min,
 		block_max,
-		spawnit.registered_spawnings
+		spawnit.registered_spawns -- TODO: *possibly* shove this into a file in the wolrdpath and load it into the async env
 	)
 end
