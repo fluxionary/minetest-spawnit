@@ -1,7 +1,8 @@
 spawnit.stats = {
-	last_measure_time = os.clock(),
+	last_measure_time = minetest.get_us_time(),
 	ao_calc_duration = 0,
 	get_ao_blocks_duration = 0,
+	async_queue_duration = 0,
 	async_callback_duration = 0,
 	spawn_mobs_duration = 0,
 }
@@ -24,16 +25,21 @@ function spawnit.get_and_reset_stats()
 	stats.calculating_blocks = calculating_blocks
 	stats.cached_blocks = cached_blocks
 
-	local now = os.clock()
-	local elapsed = now - spawnit.stats.last_measure_time
-	stats.ao_calc_usage = math.round((spawnit.stats.ao_calc_duration / elapsed) * 1e6)
-	stats.get_ao_blocks_usage = math.round((spawnit.stats.get_ao_blocks_duration / elapsed) * 1e6)
-	stats.async_callback_usage = math.round((spawnit.stats.async_callback_duration / elapsed) * 1e6)
-	stats.spawn_mobs_usage = math.round((spawnit.stats.spawn_mobs_duration / elapsed) * 1e6)
+	local now = minetest.get_us_time()
+	local elapsed = (now - spawnit.stats.last_measure_time) / 1e6
+	stats.ao_calc_usage = spawnit.stats.ao_calc_duration / elapsed
+	stats.get_ao_blocks_usage = spawnit.stats.get_ao_blocks_duration / elapsed
+	stats.async_queue_usage = spawnit.stats.async_queue_duration / elapsed
+	stats.async_callback_usage = spawnit.stats.async_callback_duration / elapsed
+	stats.spawn_mobs_usage = spawnit.stats.spawn_mobs_duration / elapsed
+
+	stats.async_queue_size = spawnit.find_spawn_poss_queue:size()
+	stats.callback_queue_size = spawnit.callback_queue:size()
 
 	spawnit.stats.last_measure_time = now
 	spawnit.stats.ao_calc_duration = 0
 	spawnit.stats.get_ao_blocks_duration = 0
+	spawnit.stats.async_queue_duration = 0
 	spawnit.stats.async_callback_duration = 0
 	spawnit.stats.spawn_mobs_duration = 0
 

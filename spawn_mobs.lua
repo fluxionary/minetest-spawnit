@@ -9,7 +9,7 @@ futil.register_globalstep({
 	period = s.spawn_mobs_period,
 	catchup = "single",
 	func = function(period)
-		local start = os.clock()
+		local start = minetest.get_us_time()
 		local num_players = #minetest.get_connected_players()
 		for n, def in ipairs(spawnit.registered_spawns) do
 			local should = should_spawn(def, period, num_players)
@@ -39,6 +39,6 @@ futil.register_globalstep({
 				end
 			end
 		end
-		spawnit.stats.spawn_mobs_duration = spawnit.stats.spawn_mobs_duration + (os.clock() - start)
+		spawnit.stats.spawn_mobs_duration = spawnit.stats.spawn_mobs_duration + (minetest.get_us_time() - start)
 	end,
 })

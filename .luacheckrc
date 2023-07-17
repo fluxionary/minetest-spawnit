@@ -656,5 +656,6 @@ stds.spawnit = {
 	read_globals = {
 		"fmod",
 		"futil",
+		"action_queues",
 	},
 }

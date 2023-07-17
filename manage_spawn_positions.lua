@@ -1,5 +1,7 @@
 local CALCULATING = "calculating"
 
+local s = spawnit.settings
+
 spawnit.spawn_poss_by_hpos = {}
 spawnit.hposs_by_def = futil.DefaultTable(function()
 	return futil.Set()
@@ -48,7 +50,8 @@ local function async_call(vm, block_min, block_max, registered_spawns)
 	return poss_by_def
 end
 
-local function remove_protected_positions(poss_by_def)
+-- TODO: move to util
+local function cull_protected_positions(poss_by_def)
 	for df_index, positions in pairs(poss_by_def) do
 		local def = spawnit.registered_spawns[df_index]
 		local entity = def.entity
@@ -69,7 +72,19 @@ local function remove_protected_positions(poss_by_def)
 	end
 end
 
+local dedicated_server_step = tonumber(minetest.settings:get("dedicated_server_step")) or 0.09
+local us_per_step = s.queue_us_per_s * dedicated_server_step
+
+spawnit.find_spawn_poss_queue = action_queues.create_serverstep_queue({
+	us_per_step = us_per_step,
+})
+
+spawnit.callback_queue = action_queues.create_serverstep_queue({
+	us_per_step = us_per_step,
+})
+
 function spawnit.find_spawn_poss(block)
+	-- TODO: give this function a better name
 	local blockpos = block:get_pos()
 	local hpos = block:hash()
 
@@ -77,35 +92,43 @@ function spawnit.find_spawn_poss(block)
 		return
 	end
 
-	local block_min, block_max = block:get_bounds()
-	local mob_extents = spawnit.mob_extents
-	local pmin = vector.offset(block_min, mob_extents[1], mob_extents[2], mob_extents[3])
-	local pmax = vector.offset(block_max, mob_extents[4], mob_extents[5], mob_extents[6])
-
-	local function callback(poss_by_def)
-		if spawnit.spawn_poss_by_hpos[hpos] ~= CALCULATING then
-			-- if this already got computed somehow, or removed, leave it alone.
-			return
-		end
-
-		local start = os.clock()
-		remove_protected_positions(poss_by_def)
-		local spawn_poss = spawnit.SpawnPositions(blockpos, poss_by_def)
-		spawnit.spawn_poss_by_hpos[hpos] = spawn_poss
-		for def_index in pairs(poss_by_def) do
-			spawnit.hposs_by_def[def_index]:add(hpos)
-		end
-		spawnit.stats.async_callback_duration = spawnit.stats.async_callback_duration + (os.clock() - start)
-	end
-
 	spawnit.spawn_poss_by_hpos[hpos] = CALCULATING
 
-	minetest.handle_async(
-		async_call,
-		callback,
-		VoxelManip(pmin, pmax),
-		block_min,
-		block_max,
-		spawnit.registered_spawns -- TODO: *possibly* shove this into a file in the wolrdpath and load it into the async env
-	)
+	spawnit.find_spawn_poss_queue:push_back(function()
+		local start = minetest.get_us_time()
+
+		local block_min, block_max = block:get_bounds()
+		local mob_extents = spawnit.mob_extents
+		local pmin = vector.offset(block_min, mob_extents[1], mob_extents[2], mob_extents[3])
+		local pmax = vector.offset(block_max, mob_extents[4], mob_extents[5], mob_extents[6])
+
+		local function callback(poss_by_def)
+			spawnit.callback_queue:push_back(function()
+				if spawnit.spawn_poss_by_hpos[hpos] ~= CALCULATING then
+					-- if this already got computed somehow, or removed, leave it alone.
+					return
+				end
+
+				local start2 = minetest.get_us_time()
+				cull_protected_positions(poss_by_def)
+				local spawn_poss = spawnit.SpawnPositions(blockpos, poss_by_def)
+				spawnit.spawn_poss_by_hpos[hpos] = spawn_poss
+				for def_index in pairs(poss_by_def) do
+					spawnit.hposs_by_def[def_index]:add(hpos)
+				end
+				spawnit.stats.async_callback_duration = spawnit.stats.async_callback_duration
+					+ (minetest.get_us_time() - start2)
+			end)
+		end
+
+		minetest.handle_async(
+			async_call,
+			callback,
+			VoxelManip(pmin, pmax),
+			block_min,
+			block_max,
+			spawnit.registered_spawns -- TODO: *possibly* shove this into a file in the wolrdpath and load it into the async env
+		)
+		spawnit.stats.async_queue_duration = spawnit.stats.async_queue_duration + (minetest.get_us_time() - start)
+	end)
 end

@@ -15,6 +15,7 @@ local is_too_far = spawnit.util.is_too_far
 
 local active_block_range = tonumber(minetest.settings:get("active_block_range")) or 4
 local active_object_send_range_blocks = tonumber(minetest.settings:get("active_object_send_range_blocks")) or 8
+local movement_walk_speed = tonumber(minetest.settings:get("movement_speed_walk")) or 4.0
 
 spawnit.visibility_by_hpos = futil.DefaultTable(function()
 	return Set()
@@ -47,9 +48,35 @@ minetest.register_on_leaveplayer(function(player)
 	spawnit.nearby_blocks_by_player_name[player_name] = nil
 end)
 
+local previous_pos_and_time_by_player_name = {}
+
+local function is_moving_too_fast(player)
+	-- TODO: move this to util
+	local max_speed = s.player_move_too_fast_ratio * movement_walk_speed
+	if player:get_velocity():length() >= max_speed then
+		return true
+	end
+	local player_name = player:get_player_name()
+	local previous_pos_and_time = previous_pos_and_time_by_player_name[player_name]
+	local pos = player:get_pos()
+	local now = minetest.get_us_time()
+	if not previous_pos_and_time then
+		previous_pos_and_time_by_player_name[player_name] = { pos, now }
+		return false
+	end
+	local previous_pos, previous_time = unpack(previous_pos_and_time)
+	local too_fast = pos:distance(previous_pos) / (now - previous_time) >= max_speed
+	previous_pos_and_time_by_player_name[player_name] = { pos, now }
+	return too_fast
+end
+
 -- see `doc/active object regions.md`
 local function get_ao_blocks(player)
-	local start = os.clock()
+	if is_moving_too_fast(player) then
+		return {}
+	end
+
+	local start = minetest.get_us_time()
 	local player_pos = player:get_pos()
 	local player_blockpos = get_blockpos(player_pos)
 	local x0, y0, z0 = player_blockpos.x, player_blockpos.y, player_blockpos.z
@@ -95,7 +122,7 @@ local function get_ao_blocks(player)
 		end
 	end
 
-	spawnit.stats.get_ao_blocks_duration = spawnit.stats.get_ao_blocks_duration + (os.clock() - start)
+	spawnit.stats.get_ao_blocks_duration = spawnit.stats.get_ao_blocks_duration + (minetest.get_us_time() - start)
 
 	return blocks_by_hpos
 end
@@ -109,7 +136,7 @@ futil.register_globalstep({
 		if #players == 0 then
 			return
 		end
-		local start = os.clock()
+		local start = minetest.get_us_time()
 		player_i = (player_i % #players) + 1
 		local player = players[player_i]
 		local player_name = player:get_player_name()
@@ -165,7 +192,7 @@ futil.register_globalstep({
 			end
 		end
 
-		spawnit.stats.ao_calc_duration = spawnit.stats.ao_calc_duration + (os.clock() - start)
+		spawnit.stats.ao_calc_duration = spawnit.stats.ao_calc_duration + (minetest.get_us_time() - start)
 	end,
 })
 
@@ -174,7 +201,7 @@ futil.register_globalstep({
 	name = "spawnit:update_forceloaded_ao",
 	period = s.update_ao_period,
 	func = function()
-		local start = os.clock()
+		local start = minetest.get_us_time()
 		local forceloaded = spawnit.get_forceloaded()
 		local need_to_find_spawn_poss = {}
 		for hpos in (previous_forceloaded - forceloaded):iterate() do
@@ -208,6 +235,6 @@ futil.register_globalstep({
 		end
 		previous_forceloaded = forceloaded
 
-		spawnit.stats.ao_calc_duration = spawnit.stats.ao_calc_duration + (os.clock() - start)
+		spawnit.stats.ao_calc_duration = spawnit.stats.ao_calc_duration + (minetest.get_us_time() - start)
 	end,
 })

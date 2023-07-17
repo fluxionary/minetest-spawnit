@@ -15,5 +15,10 @@
 * need to be able to somehow say "spawn on leaves, but only if they're solid"
 * show exponential moving averages of some HUD stat values
 * don't recalculate player AO if they are moving too quickly (check get_velocity and also total moved distance)
-  * maybe we need to split up adding new AO stuff and removing stale AO stuff, otherwise we end up trying to
-    spawn mobs in unloaded areas
+  * `tonumber(minetest.settings:get("movement_speed_walk")) or 4.0`
+  * we need to split up adding new AO stuff and removing stale AO stuff, otherwise we might end up trying to
+    spawn mobs in unloaded areas if a player runs away from it
+    * i guess we could just return their AO area as "empty" if they're moving too fast?
+* if your priv gets revoked, you can't disable the HUD...
+  * need to make it so that
+* calculating hud stuff is expensive - don't do it if no-one is using the hud

@@ -1,4 +1,6 @@
+fmod.check_version({ year = 2023, month = 7, day = 14 }) -- async_dofile
 futil.check_version({ year = 2023, month = 7, day = 14 })
+action_queues.check_version({ year = 2023, month = 7, day = 17 }) -- namespace change
 
 spawnit = fmod.create()
 
