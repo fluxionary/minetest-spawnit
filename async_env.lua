@@ -25,6 +25,7 @@ local cids_by_group = DefaultTable(function()
 	return Set()
 end)
 
+-- build cid sets
 for name, def in pairs(minetest.registered_nodes) do
 	local cid = get_content_id(name)
 	if def.walkable ~= false then -- TODO https://github.com/minetest/minetest/issues/13644

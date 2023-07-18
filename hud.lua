@@ -8,8 +8,14 @@ spawnit.hud = futil.define_hud("spawnit:hud", {
 	enabled_by_default = false,
 	get_hud_data = spawnit.get_and_reset_stats,
 	get_hud_def = function(player, stats)
-		local lines = {
-			f("approx memory usage = %.1fMiB", stats.approx_memory_usage / (1024 * 1024)),
+		local lines
+		if s.track_memory_usage then
+			lines = { f("approx memory usage = %.1fMiB", stats.approx_memory_usage / (1024 * 1024)) }
+		else
+			lines = {}
+		end
+
+		table.insert_all(lines, {
 			f("#registered_spawns = %i", stats.registered_spawns),
 			f("#active_object_blocks = %i", stats.active_object_blocks),
 			f("#nearby_blocks = %i", stats.nearby_blocks),
@@ -23,7 +29,7 @@ spawnit.hud = futil.define_hud("spawnit:hud", {
 			f("spawn_mobs_usage = %.1fus/s", stats.spawn_mobs_usage),
 			f("num_spawned = %i", stats.num_spawned),
 			f("hud data gen time = %ius", stats.stats_gen_time),
-		}
+		})
 		local text = table.concat(lines, "\n")
 		return {
 			hud_elem_type = "text",

@@ -7,7 +7,6 @@ spawnit = fmod.create()
 spawnit.dofile("util")
 spawnit.dofile("stats")
 
-spawnit.dofile("block_class")
 spawnit.dofile("spawn_positions_class")
 
 spawnit.dofile("manage_ao_blocks")

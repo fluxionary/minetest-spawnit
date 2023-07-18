@@ -1,9 +1,11 @@
 local CALCULATING = "calculating"
 
+local get_position_from_hash = minetest.get_position_from_hash
 local get_us_time = minetest.get_us_time
 local handle_async = minetest.handle_async
 
 local Set = futil.Set
+local get_block_bounds = futil.vector.get_block_bounds
 
 local s = spawnit.settings
 
@@ -62,6 +64,33 @@ local function async_call(vm, block_min, block_max)
 	return hpos_set_by_def
 end
 
+local function make_callback(block_hpos)
+	return function(hpos_set_by_def)
+		if spawnit.spawn_poss_by_block_hpos[block_hpos] ~= CALCULATING then
+			-- if this already got computed somehow, or removed, leave it alone.
+			return
+		end
+		spawnit.callback_queue:push_back(function()
+			if spawnit.spawn_poss_by_block_hpos[block_hpos] ~= CALCULATING then
+				-- if this already got computed somehow, or removed, leave it alone.
+				return
+			end
+
+			local start2 = get_us_time()
+			for def_index, hpos_set in pairs(hpos_set_by_def) do
+				hpos_set_by_def[def_index] = Set.convert(hpos_set)
+			end
+
+			local spawn_poss = spawnit.SpawnPositions(hpos_set_by_def)
+			spawnit.spawn_poss_by_block_hpos[block_hpos] = spawn_poss
+			for def_index in pairs(hpos_set_by_def) do
+				spawnit.block_hposs_by_def[def_index]:add(block_hpos)
+			end
+			spawnit.stats.async_callback_duration = spawnit.stats.async_callback_duration + (get_us_time() - start2)
+		end)
+	end
+end
+
 local dedicated_server_step = tonumber(minetest.settings:get("dedicated_server_step")) or 0.09
 local us_per_step = s.queue_us_per_s * dedicated_server_step
 
@@ -73,51 +102,31 @@ spawnit.callback_queue = action_queues.create_serverstep_queue({
 	us_per_step = us_per_step,
 })
 
-function spawnit.find_spawn_poss(block)
+function spawnit.find_spawn_poss(block_hpos)
 	-- TODO: give this function a better name
-	local blockpos = block:get_pos()
-	local hpos = block:hash()
-
-	if spawnit.spawn_poss_by_block_hpos[hpos] then
+	if spawnit.spawn_poss_by_block_hpos[block_hpos] then
 		return
 	end
 
-	spawnit.spawn_poss_by_block_hpos[hpos] = CALCULATING
+	spawnit.spawn_poss_by_block_hpos[block_hpos] = CALCULATING
 
 	spawnit.find_spawn_poss_queue:push_back(function()
-		local start = get_us_time()
-
-		local block_min, block_max = block:get_bounds()
-		local mob_extents = spawnit.mob_extents
-		local pmin = vector.offset(block_min, mob_extents[1], mob_extents[2], mob_extents[3])
-		local pmax = vector.offset(block_max, mob_extents[4], mob_extents[5], mob_extents[6])
-
-		local function callback(hpos_set_by_def)
-			if spawnit.spawn_poss_by_block_hpos[hpos] ~= CALCULATING then
-				-- if this already got computed somehow, or removed, leave it alone.
-				return
-			end
-			spawnit.callback_queue:push_back(function()
-				if spawnit.spawn_poss_by_block_hpos[hpos] ~= CALCULATING then
-					-- if this already got computed somehow, or removed, leave it alone.
-					return
-				end
-
-				local start2 = get_us_time()
-				for def_index, hpos_set in pairs(hpos_set_by_def) do
-					hpos_set_by_def[def_index] = Set.convert(hpos_set)
-				end
-
-				local spawn_poss = spawnit.SpawnPositions(blockpos, hpos_set_by_def)
-				spawnit.spawn_poss_by_block_hpos[hpos] = spawn_poss
-				for def_index in pairs(hpos_set_by_def) do
-					spawnit.block_hposs_by_def[def_index]:add(hpos)
-				end
-				spawnit.stats.async_callback_duration = spawnit.stats.async_callback_duration + (get_us_time() - start2)
-			end)
+		if spawnit.spawn_poss_by_block_hpos[block_hpos] ~= CALCULATING then
+			-- if this already got computed somehow, or removed, leave it alone.
+			return
 		end
 
-		handle_async(async_call, callback, VoxelManip(pmin, pmax), block_min, block_max)
+		local start = get_us_time()
+
+		local blockpos = get_position_from_hash(block_hpos)
+		local block_min, block_max = get_block_bounds(blockpos)
+		local mob_extents = spawnit.mob_extents
+		local pmin = block_min:offset(mob_extents[1], mob_extents[2], mob_extents[3])
+		local pmax = block_max:offset(mob_extents[4], mob_extents[5], mob_extents[6])
+		local vm = VoxelManip(pmin, pmax)
+
+		handle_async(async_call, make_callback(block_hpos), vm, block_min, block_max)
+
 		spawnit.stats.async_queue_duration = spawnit.stats.async_queue_duration + (get_us_time() - start)
 	end)
 end

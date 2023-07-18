@@ -1,7 +1,8 @@
+-- TODO: this whole class is kinda useless, possibly remove
+
 local SpawnPositions = futil.class1()
 
-function SpawnPositions:_init(blockpos, hpos_set_by_def)
-	self._blockpos = blockpos
+function SpawnPositions:_init(hpos_set_by_def)
 	self._hpos_set_by_def = hpos_set_by_def -- indexed by numbers, but not contiguous
 end
 
@@ -23,7 +24,7 @@ function SpawnPositions:remove_hpos(def_index, hpos)
 		-- TODO this should never happen... log?
 		return false
 	end
-	hpos_set:discard(hpos) -- TODO :remove should never fail but it does... log?
+	hpos_set:discard(hpos) -- TODO `hpos_set:remove()` should never fail but it does... log?
 	if self._hpos_set_by_def[def_index]:is_empty() then
 		self._hpos_set_by_def[def_index] = nil
 		return true

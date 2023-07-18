@@ -74,6 +74,34 @@ local function validate_keys(def)
 	end
 end
 
+local special_nodes = futil.Set({
+	"any",
+	"walkable",
+	"node",
+	"not walkable",
+	"breathable",
+	"breathable airlike",
+})
+
+local function validate_node(node)
+	if special_nodes:contains(node) then
+		return
+	elseif node:match("^group:") then
+		-- the group doesn't necessarily have to match anything
+		return
+	elseif minetest.registered_nodes[node] then
+		return
+	else
+		error(f("unknown node %s", node))
+	end
+end
+
+local function validate_nodes(nodes)
+	for _, node in ipairs(nodes) do
+		validate_node(node)
+	end
+end
+
 function spawnit.register(def)
 	local entity = def.entity
 	if not entity then
@@ -94,9 +122,11 @@ function spawnit.register(def)
 	assert(def.chance > 0)
 	def.per_player = futil.coalesce(def.per_player, true)
 	def.on = def.on or { "node" }
+	validate_nodes(def.on)
 	def.within = def.within or { "breathable" }
+	validate_nodes(def.within)
 	def.near = def.near or { "any" }
-	-- TODO: verify that biome, on, and within are valid
+	validate_nodes(def.near)
 	def.min_y = def.min_y or MIN_Y
 	def.max_y = def.max_y or MAX_Y
 	assert(def.min_y <= def.max_y, f("max_y (%i) < min_y (%i); mob cannot spawn", def.max_y, def.min_y))

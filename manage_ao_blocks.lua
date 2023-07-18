@@ -1,91 +1,79 @@
-local FORCELOAD = "<FORCELOAD>"
+local FORCELOAD = "<FORCELOAD>" -- special "player name" to track forceloaded blocks
 
 local v_new = vector.new
 
+local compare_block_status = minetest.compare_block_status
+local get_position_from_hash = minetest.get_position_from_hash
+local get_us_time = minetest.get_us_time
+local hash_node_position = minetest.hash_node_position
+
+local Set = futil.Set
+local get_block_min = futil.vector.get_block_min
 local get_blockpos = futil.vector.get_blockpos
 local is_blockpos_inside_world_bounds = futil.vector.is_blockpos_inside_world_bounds
-local Set = futil.Set
 
 local s = spawnit.settings
-local Block = spawnit.Block
 
 local get_fov = spawnit.util.get_fov
+local has_changed_pos_or_look = spawnit.util.has_changed_pos_or_look
 local is_block_in_sight = spawnit.util.is_block_in_sight
+local is_moving_too_fast = spawnit.util.is_moving_too_fast
 local is_too_far = spawnit.util.is_too_far
 
 local active_block_range = tonumber(minetest.settings:get("active_block_range")) or 4
 local active_object_send_range_blocks = tonumber(minetest.settings:get("active_object_send_range_blocks")) or 8
-local movement_walk_speed = tonumber(minetest.settings:get("movement_speed_walk")) or 4.0
 
-spawnit.visibility_by_hpos = futil.DefaultTable(function()
+-- for a given mapblock, who is it "visible" to - that is, who is keeping it in range for active objects?
+-- if a block is no longer visible to any players, it is removed from this map.
+spawnit.visibility_by_block_hpos = futil.DefaultTable(function()
 	return Set()
 end)
-spawnit.nearby_players_by_hpos = futil.DefaultTable(function()
+-- for a given mapblock, who was it visible to "recently"? if a player moves too far away from a block,
+-- they are no longer nearby. if it is not near any players, it is removed from this map.
+spawnit.nearby_players_by_block_hpos = futil.DefaultTable(function()
 	return Set()
 end)
-spawnit.nearby_blocks_by_player_name = {}
-local previous_pos_and_time_by_player_name = {}
-local previous_pos_and_look_by_player_name = {}
+-- for a given player, which blocks are near them?
+spawnit.nearby_block_hpos_set_by_player_name = {}
 
 minetest.register_on_joinplayer(function(player)
 	local player_name = player:get_player_name()
-	spawnit.nearby_blocks_by_player_name[player_name] = {}
-	previous_pos_and_time_by_player_name[player_name] = { player:get_pos(), minetest.get_us_time() }
-	previous_pos_and_look_by_player_name[player_name] = { player:get_pos(), player:get_look_dir() }
+	spawnit.nearby_block_hpos_set_by_player_name[player_name] = Set()
 end)
 
 minetest.register_on_leaveplayer(function(player)
 	local player_name = player:get_player_name()
-	local nearby_blocks = spawnit.nearby_blocks_by_player_name[player_name]
-	for hpos in pairs(nearby_blocks) do
-		local visibility = spawnit.visibility_by_hpos[hpos]
+	local nearby_block_hpos_set = spawnit.nearby_block_hpos_set_by_player_name[player_name]
+	for hpos in nearby_block_hpos_set:iterate() do
+		local visibility = spawnit.visibility_by_block_hpos[hpos]
 		visibility:remove(player_name)
 		if visibility:is_empty() then
-			spawnit.visibility_by_hpos[hpos] = nil
+			spawnit.visibility_by_block_hpos[hpos] = nil
 		end
-		local nearby = spawnit.nearby_players_by_hpos[hpos]
+		local nearby = spawnit.nearby_players_by_block_hpos[hpos]
 		nearby:remove(player_name)
 		if nearby:is_empty() then
-			spawnit.nearby_players_by_hpos[hpos] = nil
+			spawnit.nearby_players_by_block_hpos[hpos] = nil
 			spawnit.clear_spawns(hpos)
 		end
 	end
-	spawnit.nearby_blocks_by_player_name[player_name] = nil
-	previous_pos_and_time_by_player_name[player_name] = nil
-	previous_pos_and_look_by_player_name[player_name] = nil
+	spawnit.nearby_block_hpos_set_by_player_name[player_name] = nil
 end)
 
-local function is_moving_too_fast(player)
-	-- TODO: move this to util
-	local max_speed = s.player_move_too_fast_ratio * movement_walk_speed
-	if player:get_velocity():length() >= max_speed then
-		return true
-	end
-	local player_name = player:get_player_name()
-	local previous_pos_and_time = previous_pos_and_time_by_player_name[player_name]
-	local pos = player:get_pos()
-	local now = minetest.get_us_time()
-	if not previous_pos_and_time then
-		previous_pos_and_time_by_player_name[player_name] = { pos, now }
-		return false
-	end
-	local previous_pos, previous_time = unpack(previous_pos_and_time)
-	local too_fast = pos:distance(previous_pos) / (now - previous_time) >= max_speed
-	previous_pos_and_time_by_player_name[player_name] = { pos, now }
-	return too_fast
-end
-
 -- see `doc/active object regions.md`
-local function get_ao_blocks(player)
+-- see also `ActiveBlockList::update` in "serverenvironment.cpp" in the minetest source code
+local function get_ao_block_hpos_set(player)
+	local block_hpos_set = Set()
+
 	if is_moving_too_fast(player) then
-		return {}
+		-- if the player is moving too quickly, don't bother computing which blocks are active, as they will likely
+		-- change soon anyway
+		return block_hpos_set
 	end
 
-	local start = minetest.get_us_time()
 	local player_pos = player:get_pos()
 	local player_blockpos = get_blockpos(player_pos)
 	local x0, y0, z0 = player_blockpos.x, player_blockpos.y, player_blockpos.z
-	local blocks_by_hpos = {}
 	-- get active blocks
 	local r = active_block_range
 	for x = x0 - r, x0 + r do
@@ -93,15 +81,14 @@ local function get_ao_blocks(player)
 			for z = z0 - r, z0 + r do
 				local blockpos = v_new(x, y, z)
 				if is_blockpos_inside_world_bounds(blockpos) then
-					local block = Block(blockpos, true)
-					blocks_by_hpos[block:hash()] = block
+					block_hpos_set:add(hash_node_position(blockpos))
 				end
 			end
 		end
 	end
 
 	if active_object_send_range_blocks <= active_block_range then
-		return blocks_by_hpos
+		return block_hpos_set
 	end
 
 	-- get visible blocks
@@ -112,37 +99,26 @@ local function get_ao_blocks(player)
 	local eye_blockpos = get_blockpos(eye_pos)
 	x0, y0, z0 = eye_blockpos.x, eye_blockpos.y, eye_blockpos.z
 	local fov = get_fov(player)
+	-- TODO: this naively looks at every mapblock inside a cube and checks whether it's inside the solid angle,
+	--       possibly we could calculate the maximum extents of the solid angle, and only check within those?
 	r = active_object_send_range_blocks
 	for x = x0 - r, x0 + r do
 		for y = y0 - r, y0 + r do
 			for z = z0 - r, z0 + r do
 				local blockpos = v_new(x, y, z)
-				if is_blockpos_inside_world_bounds(blockpos) then
-					local block = Block(blockpos, true)
-					if is_block_in_sight(block, eye_pos, look_dir, fov, r) then
-						blocks_by_hpos[block:hash()] = block
-					end
+				local block_hpos = hash_node_position(blockpos)
+				if
+					not block_hpos_set[block_hpos]
+					and is_blockpos_inside_world_bounds(blockpos)
+					and is_block_in_sight(blockpos, eye_pos, look_dir, fov, r)
+				then
+					block_hpos_set:add(block_hpos)
 				end
 			end
 		end
 	end
 
-	spawnit.stats.get_ao_blocks_duration = spawnit.stats.get_ao_blocks_duration + (minetest.get_us_time() - start)
-
-	return blocks_by_hpos
-end
-
-local function hasnt_moved(player)
-	local player_name = player:get_player_name()
-	local pos = player:get_pos()
-	local look = player:get_look_dir()
-	local previous_pos, previous_look = unpack(previous_pos_and_look_by_player_name[player_name])
-	previous_pos_and_look_by_player_name[player_name] = { pos, look }
-	if active_object_send_range_blocks <= active_block_range then
-		return pos:equals(previous_pos)
-	else
-		return pos:equals(previous_pos) and look:equals(previous_look)
-	end
+	return block_hpos_set
 end
 
 local player_i = 1
@@ -150,81 +126,86 @@ futil.register_globalstep({
 	name = "spawnit:update_player_ao",
 	period = s.update_ao_period,
 	func = function()
+		local start = get_us_time()
+
 		local players = minetest.get_connected_players()
 		if #players == 0 then
 			return
 		end
 
-		local start = minetest.get_us_time()
+		-- first, we pick a player to update
 		player_i = (player_i % #players) + 1
 		local player = players[player_i]
-		local j = 1
-		local trials = math.min(5, #players)
-		while hasnt_moved(player) and j <= trials do
+		local j = 0
+		local trials = math.min(5, #players) -- TODO: constant -> setting
+		while not has_changed_pos_or_look(player) and j < trials do
+			j = j + 1
 			player_i = (player_i % #players) + 1
 			player = players[player_i]
-			j = j + 1
 		end
 
-		if j > trials then
-			spawnit.stats.ao_calc_duration = spawnit.stats.ao_calc_duration + (minetest.get_us_time() - start)
+		-- we didn't find a suitable player to update
+		if j >= trials then
 			return
 		end
 
 		local player_name = player:get_player_name()
 		local player_pos = player:get_pos()
-		local nearby_blocks = spawnit.nearby_blocks_by_player_name[player_name]
-		local new_ao_blocks = get_ao_blocks(player)
-		local need_to_find_spawn_poss = {}
+		local nearby_block_hpos_set = spawnit.nearby_block_hpos_set_by_player_name[player_name]
+		local new_ao_block_hpos_set = get_ao_block_hpos_set(player)
+		local block_hposs_without_spawn_poss = {}
 
-		for hpos, block in pairs(nearby_blocks) do
-			local visibility = spawnit.visibility_by_hpos[hpos]
-			local nearby = spawnit.nearby_players_by_hpos[hpos]
+		-- first, update the existing set of blocks
+		for block_hpos in nearby_block_hpos_set:iterate() do
+			local visibility = spawnit.visibility_by_block_hpos[block_hpos]
+			local nearby = spawnit.nearby_players_by_block_hpos[block_hpos]
 
-			if new_ao_blocks[hpos] then
-				block:set_active_objects(true)
-				new_ao_blocks[hpos] = nil -- already accounted for
-				if not spawnit.spawn_poss_by_block_hpos[hpos] then
-					need_to_find_spawn_poss[#need_to_find_spawn_poss + 1] = hpos
+			if new_ao_block_hpos_set:contains(block_hpos) then
+				new_ao_block_hpos_set:remove(block_hpos) -- already accounted for
+				if not spawnit.spawn_poss_by_block_hpos[block_hpos] then
+					block_hposs_without_spawn_poss[#block_hposs_without_spawn_poss + 1] = block_hpos
 				end
 				visibility:add(player_name)
 				nearby:add(player_name)
 			else
-				block:set_active_objects(false)
 				visibility:discard(player_name)
 				if visibility:is_empty() then
-					spawnit.visibility_by_hpos[hpos] = nil
+					spawnit.visibility_by_block_hpos[block_hpos] = nil
 				end
-				if is_too_far(player_pos, hpos) then
-					nearby_blocks[hpos] = nil
+				if is_too_far(player_pos, block_hpos) then
+					nearby_block_hpos_set:remove(block_hpos)
 					nearby:remove(player_name)
 					if nearby:is_empty() then
-						spawnit.nearby_players_by_hpos[hpos] = nil
-						spawnit.clear_spawns(hpos)
+						spawnit.nearby_players_by_block_hpos[block_hpos] = nil
+						spawnit.clear_spawns(block_hpos)
 					end
 				end
 			end
 		end
 
-		for hpos, block in pairs(new_ao_blocks) do
-			if not spawnit.spawn_poss_by_block_hpos[hpos] then
-				need_to_find_spawn_poss[#need_to_find_spawn_poss + 1] = hpos
+		-- next, process new blocks
+		for block_hpos in new_ao_block_hpos_set:iterate() do
+			if not spawnit.spawn_poss_by_block_hpos[block_hpos] then
+				block_hposs_without_spawn_poss[#block_hposs_without_spawn_poss + 1] = block_hpos
 			end
-			nearby_blocks[hpos] = block
-			local visibility = spawnit.visibility_by_hpos[hpos]
+			nearby_block_hpos_set:add(block_hpos)
+			local visibility = spawnit.visibility_by_block_hpos[block_hpos]
 			visibility:add(player_name)
-			local nearby = spawnit.nearby_players_by_hpos[hpos]
+			local nearby = spawnit.nearby_players_by_block_hpos[block_hpos]
 			nearby:add(player_name)
 		end
-		for i = 1, #need_to_find_spawn_poss do
-			local block = nearby_blocks[need_to_find_spawn_poss[i]]
-			local pos = block:get_min()
-			if minetest.compare_block_status(pos, "active") or minetest.compare_block_status(pos, "loaded") then
-				spawnit.find_spawn_poss(block)
+
+		-- finally, queue up processing of spawn positions
+		for i = 1, #block_hposs_without_spawn_poss do
+			local block_hpos = block_hposs_without_spawn_poss[i]
+			local blockpos = get_position_from_hash(block_hpos)
+			local pos = get_block_min(blockpos)
+			if compare_block_status(pos, "active") or compare_block_status(pos, "loaded") then
+				spawnit.find_spawn_poss(block_hpos)
 			end
 		end
 
-		spawnit.stats.ao_calc_duration = spawnit.stats.ao_calc_duration + (minetest.get_us_time() - start)
+		spawnit.stats.ao_calc_duration = spawnit.stats.ao_calc_duration + (get_us_time() - start)
 	end,
 })
 
@@ -233,16 +214,16 @@ futil.register_globalstep({
 	name = "spawnit:update_forceloaded_ao",
 	period = s.update_ao_period,
 	func = function()
-		local start = minetest.get_us_time()
+		local start = get_us_time()
 		local forceloaded = spawnit.get_forceloaded()
 		local need_to_find_spawn_poss = {}
 		for hpos in (previous_forceloaded - forceloaded):iterate() do
-			local visibility = spawnit.visibility_by_hpos[hpos]
+			local visibility = spawnit.visibility_by_block_hpos[hpos]
 			visibility:remove(FORCELOAD)
 			if visibility:is_empty() then
-				spawnit.visibility_by_hpos[hpos] = nil
+				spawnit.visibility_by_block_hpos[hpos] = nil
 			end
-			local nearby = spawnit.nearby_players_by_hpos[hpos]
+			local nearby = spawnit.nearby_players_by_block_hpos[hpos]
 			nearby:remove(FORCELOAD)
 			if nearby:is_empty() then
 				spawnit.clear_spawns(hpos)
@@ -252,21 +233,21 @@ futil.register_globalstep({
 			if not spawnit.spawn_poss_by_block_hpos[hpos] then
 				need_to_find_spawn_poss[#need_to_find_spawn_poss + 1] = hpos
 			end
-			local visibility = spawnit.visibility_by_hpos[hpos]
+			local visibility = spawnit.visibility_by_block_hpos[hpos]
 			visibility:add(FORCELOAD)
-			local nearby = spawnit.nearby_players_by_hpos[hpos]
+			local nearby = spawnit.nearby_players_by_block_hpos[hpos]
 			nearby:add(FORCELOAD)
 		end
 		for i = 1, #need_to_find_spawn_poss do
-			local blockpos = minetest.get_position_from_hash(need_to_find_spawn_poss[i])
-			local block = Block(blockpos, true)
-			local pos = block:get_min()
-			if minetest.compare_block_status(pos, "active") or minetest.compare_block_status(pos, "loaded") then
-				spawnit.find_spawn_poss(block)
+			local block_hpos = need_to_find_spawn_poss[i]
+			local blockpos = get_position_from_hash(block_hpos)
+			local pos = get_block_min(blockpos)
+			if compare_block_status(pos, "active") or compare_block_status(pos, "loaded") then
+				spawnit.find_spawn_poss(block_hpos)
 			end
 		end
 		previous_forceloaded = forceloaded
 
-		spawnit.stats.ao_calc_duration = spawnit.stats.ao_calc_duration + (minetest.get_us_time() - start)
+		spawnit.stats.ao_calc_duration = spawnit.stats.ao_calc_duration + (get_us_time() - start)
 	end,
 })

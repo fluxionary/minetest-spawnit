@@ -7,3 +7,4 @@ spawnit:spawn_chance_multiplier () float 1
 spawnit:queue_us_per_s () float 3000
 spawnit:player_move_too_fast_ratio () float 1.5
 spawnit:max_positions_per_mapblock_per_rule () float 128
+spawnit:track_memory_usage () bool false
