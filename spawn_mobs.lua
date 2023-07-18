@@ -3,6 +3,7 @@ local s = spawnit.settings
 local should_spawn = spawnit.util.should_spawn
 local pick_a_cluster = spawnit.util.pick_a_cluster
 local final_check = spawnit.util.final_check
+local remove_spawn_position = spawnit.util.remove_spawn_position
 
 futil.register_globalstep({
 	name = "spawnit:spawn_mobs",
@@ -11,10 +12,10 @@ futil.register_globalstep({
 	func = function(period)
 		local start = minetest.get_us_time()
 		local num_players = #minetest.get_connected_players()
-		for n, def in ipairs(spawnit.registered_spawns) do
+		for def_index, def in ipairs(spawnit.registered_spawns) do
 			local should = should_spawn(def, period, num_players)
 			if should then
-				local cluster = pick_a_cluster(n, def)
+				local cluster = pick_a_cluster(def_index, def)
 				if #cluster > 0 then
 					for _, pos in ipairs(cluster) do
 						if final_check(def, pos) then
@@ -27,13 +28,14 @@ futil.register_globalstep({
 							local spos = minetest.pos_to_string(pos)
 							if obj then
 								spawnit.log("action", "spawned %s @ %s", def.entity, spos)
-								-- TODO: remove pos from possible positions
 								if def.after_spawn then
 									def.after_spawn(pos, obj)
 								end
 							else
 								spawnit.log("warning", "failed to spawn %s @ %s", def.entity, spos)
 							end
+							spawnit.stats.num_spawned = spawnit.stats.num_spawned + 1
+							remove_spawn_position(def_index, pos)
 						end
 					end
 				end

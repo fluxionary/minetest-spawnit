@@ -8,12 +8,14 @@ local math_random = math.random
 local choice = futil.random.choice
 local deg2rad = futil.math.deg2rad
 local equals = futil.equals
+local get_blockpos = futil.vector.get_blockpos
 local sample = futil.random.sample
 
 local get_node_light = minetest.get_node_light
 local get_objects_inside_radius = minetest.get_objects_inside_radius
 local get_position_from_hash = minetest.get_position_from_hash
 local get_timeofday = minetest.get_timeofday
+local hash_node_position = minetest.hash_node_position
 
 local MAP_BLOCKSIZE = minetest.MAP_BLOCKSIZE
 local BLOCK_MAX_RADIUS = math.sqrt(3) / 2 * MAP_BLOCKSIZE
@@ -200,35 +202,33 @@ local function check_pos(def, pos)
 end
 
 function spawnit.util.pick_a_cluster(def_index, def)
-	local hposs_set = spawnit.hposs_by_def[def_index]
-	if not hposs_set or hposs_set:size() == 0 then
+	local block_hposs_set = spawnit.block_hposs_by_def[def_index]
+	if not block_hposs_set or block_hposs_set:size() == 0 then
 		-- nowhere to spawn
 		return {}
 	end
-	local hposs_list = {}
-	for hpos in hposs_set:iterate() do
-		hposs_list[#hposs_list + 1] = hpos
+	local block_hposs_list = {}
+	for block_hpos in block_hposs_set:iterate() do
+		block_hposs_list[#block_hposs_list + 1] = block_hpos
 	end
 	local poss = {}
 	for _ = 1, 5 do
-		local hpos = hposs_list[math_random(#hposs_list)]
-		local spawn_poss = spawnit.spawn_poss_by_hpos[hpos]
+		local block_hpos = block_hposs_list[math_random(#block_hposs_list)]
+		local spawn_poss = spawnit.spawn_poss_by_block_hpos[block_hpos]
 		if spawn_poss then
-			local possible_poss = spawn_poss:get_poss(def_index)
-			if possible_poss and #possible_poss > 0 then
-				local filtered = {}
-				for i = 1, #possible_poss do
-					local pos = possible_poss[i]
-					if check_pos(def, pos) then
-						filtered[#filtered + 1] = pos
-					end
+			local hpos_set = spawn_poss:get_hpos_set(def_index)
+			local filtered = {}
+			for hpos in hpos_set:iterate() do
+				local pos = get_position_from_hash(hpos)
+				if check_pos(def, pos) then
+					filtered[#filtered + 1] = pos
 				end
-				if #filtered >= def.cluster then
-					poss = filtered
-					break
-				elseif #filtered > #poss then
-					poss = filtered
-				end
+			end
+			if #filtered >= def.cluster then
+				poss = filtered
+				break
+			elseif #filtered > #poss then
+				poss = filtered
 			end
 		end
 	end
@@ -333,4 +333,35 @@ function spawnit.util.final_check(def, pos)
 	end
 
 	return true
+end
+
+function spawnit.util.remove_spawn_position(def_index, pos)
+	local hpos = hash_node_position(pos)
+	local blockpos = get_blockpos(pos)
+	local block_hpos = hash_node_position(blockpos)
+	local spawn_poss = spawnit.spawn_poss_by_block_hpos[block_hpos]
+	if spawn_poss and spawn_poss:remove_hpos(def_index, hpos) then
+		spawnit.block_hposs_by_def[def_index]:remove(block_hpos)
+	end
+end
+
+function spawnit.util.cull_protected_positions(hpos_set_by_def)
+	local is_protected = minetest.is_protected
+	for def_index, hpos_set in pairs(hpos_set_by_def) do
+		local def = spawnit.registered_spawns[def_index]
+		local entity = def.entity
+		local any_left = false
+		if not def.spawn_in_protected then
+			for hpos in hpos_set:iterate() do
+				if is_protected(get_position_from_hash(hpos), entity) then
+					hpos_set:remove(hpos)
+				else
+					any_left = true
+				end
+			end
+		end
+		if not any_left then
+			hpos_set_by_def[def_index] = nil
+		end
+	end
 end

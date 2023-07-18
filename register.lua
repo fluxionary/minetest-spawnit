@@ -131,3 +131,11 @@ function spawnit.register(def)
 
 	update_mob_extents(def)
 end
+
+minetest.register_on_mods_loaded(function()
+	local contents = minetest.serialize(spawnit.registered_spawns)
+	local filename = futil.path_concat(minetest.get_worldpath(), "spawnit_rules.serialized")
+	futil.write_file(filename, contents)
+
+	spawnit.register = nil
+end)

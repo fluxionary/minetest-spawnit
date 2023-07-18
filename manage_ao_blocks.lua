@@ -24,9 +24,14 @@ spawnit.nearby_players_by_hpos = futil.DefaultTable(function()
 	return Set()
 end)
 spawnit.nearby_blocks_by_player_name = {}
+local previous_pos_and_time_by_player_name = {}
+local previous_pos_and_look_by_player_name = {}
 
 minetest.register_on_joinplayer(function(player)
-	spawnit.nearby_blocks_by_player_name[player:get_player_name()] = {}
+	local player_name = player:get_player_name()
+	spawnit.nearby_blocks_by_player_name[player_name] = {}
+	previous_pos_and_time_by_player_name[player_name] = { player:get_pos(), minetest.get_us_time() }
+	previous_pos_and_look_by_player_name[player_name] = { player:get_pos(), player:get_look_dir() }
 end)
 
 minetest.register_on_leaveplayer(function(player)
@@ -46,9 +51,9 @@ minetest.register_on_leaveplayer(function(player)
 		end
 	end
 	spawnit.nearby_blocks_by_player_name[player_name] = nil
+	previous_pos_and_time_by_player_name[player_name] = nil
+	previous_pos_and_look_by_player_name[player_name] = nil
 end)
-
-local previous_pos_and_time_by_player_name = {}
 
 local function is_moving_too_fast(player)
 	-- TODO: move this to util
@@ -127,6 +132,19 @@ local function get_ao_blocks(player)
 	return blocks_by_hpos
 end
 
+local function hasnt_moved(player)
+	local player_name = player:get_player_name()
+	local pos = player:get_pos()
+	local look = player:get_look_dir()
+	local previous_pos, previous_look = unpack(previous_pos_and_look_by_player_name[player_name])
+	previous_pos_and_look_by_player_name[player_name] = { pos, look }
+	if active_object_send_range_blocks <= active_block_range then
+		return pos:equals(previous_pos)
+	else
+		return pos:equals(previous_pos) and look:equals(previous_look)
+	end
+end
+
 local player_i = 1
 futil.register_globalstep({
 	name = "spawnit:update_player_ao",
@@ -136,9 +154,23 @@ futil.register_globalstep({
 		if #players == 0 then
 			return
 		end
+
 		local start = minetest.get_us_time()
 		player_i = (player_i % #players) + 1
 		local player = players[player_i]
+		local j = 1
+		local trials = math.min(5, #players)
+		while hasnt_moved(player) and j <= trials do
+			player_i = (player_i % #players) + 1
+			player = players[player_i]
+			j = j + 1
+		end
+
+		if j > trials then
+			spawnit.stats.ao_calc_duration = spawnit.stats.ao_calc_duration + (minetest.get_us_time() - start)
+			return
+		end
+
 		local player_name = player:get_player_name()
 		local player_pos = player:get_pos()
 		local nearby_blocks = spawnit.nearby_blocks_by_player_name[player_name]
@@ -152,7 +184,7 @@ futil.register_globalstep({
 			if new_ao_blocks[hpos] then
 				block:set_active_objects(true)
 				new_ao_blocks[hpos] = nil -- already accounted for
-				if not spawnit.spawn_poss_by_hpos[hpos] then
+				if not spawnit.spawn_poss_by_block_hpos[hpos] then
 					need_to_find_spawn_poss[#need_to_find_spawn_poss + 1] = hpos
 				end
 				visibility:add(player_name)
@@ -175,7 +207,7 @@ futil.register_globalstep({
 		end
 
 		for hpos, block in pairs(new_ao_blocks) do
-			if not spawnit.spawn_poss_by_hpos[hpos] then
+			if not spawnit.spawn_poss_by_block_hpos[hpos] then
 				need_to_find_spawn_poss[#need_to_find_spawn_poss + 1] = hpos
 			end
 			nearby_blocks[hpos] = block
@@ -217,7 +249,7 @@ futil.register_globalstep({
 			end
 		end
 		for hpos in (forceloaded - previous_forceloaded):iterate() do
-			if not spawnit.spawn_poss_by_hpos[hpos] then
+			if not spawnit.spawn_poss_by_block_hpos[hpos] then
 				need_to_find_spawn_poss[#need_to_find_spawn_poss + 1] = hpos
 			end
 			local visibility = spawnit.visibility_by_hpos[hpos]

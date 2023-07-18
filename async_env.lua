@@ -1,6 +1,8 @@
 spawnit = fmod.create()
 
 spawnit.dofile("util")
+spawnit.registered_spawns =
+	minetest.deserialize(futil.load_file(futil.path_concat(minetest.get_worldpath(), "spawnit_rules.serialized")))
 
 local get_content_id = minetest.get_content_id
 

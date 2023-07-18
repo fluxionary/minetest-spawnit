@@ -1,22 +1,27 @@
 local CALCULATING = "calculating"
 
+local get_us_time = minetest.get_us_time
+local handle_async = minetest.handle_async
+
+local Set = futil.Set
+
 local s = spawnit.settings
 
-spawnit.spawn_poss_by_hpos = {}
-spawnit.hposs_by_def = futil.DefaultTable(function()
+spawnit.spawn_poss_by_block_hpos = {}
+spawnit.block_hposs_by_def = futil.DefaultTable(function()
 	return futil.Set()
 end)
 
 function spawnit.clear_spawns(hpos)
-	local spawn_poss = spawnit.spawn_poss_by_hpos[hpos]
+	local spawn_poss = spawnit.spawn_poss_by_block_hpos[hpos]
 	if spawn_poss then
-		spawnit.spawn_poss_by_hpos[hpos] = nil
+		spawnit.spawn_poss_by_block_hpos[hpos] = nil
 		if type(spawn_poss) ~= "string" then -- it might be "calculating"
-			for def_index in pairs(spawn_poss._poss_by_def) do -- TODO don't reference internal data, create some method
-				local hposs = spawnit.hposs_by_def[def_index]
+			for def_index in spawn_poss:iterate_def_indices() do
+				local hposs = spawnit.block_hposs_by_def[def_index]
 				hposs:discard(hpos)
 				if hposs:is_empty() then
-					spawnit.hposs_by_def[def_index] = nil
+					spawnit.block_hposs_by_def[def_index] = nil
 				end
 			end
 		end
@@ -30,46 +35,31 @@ minetest.register_on_mapblocks_changed(function(modified_blocks, modified_block_
 end)
 
 -- NOTICE: executed in the async environment, where the namespace is different!
-local function async_call(vm, block_min, block_max, registered_spawns)
+local function async_call(vm, block_min, block_max)
 	local va = VoxelArea(vm:get_emerged_area())
 	local data = vm:get_data()
 
-	local poss_by_def = {}
-	for def_index, def in ipairs(registered_spawns) do
-		local positions = {}
+	local hpos_set_by_def = {}
+	for def_index, def in ipairs(spawnit.registered_spawns) do
+		local hpos_list = {}
 		for i in va:iterp(block_min, block_max) do
 			if spawnit.is_valid_position(def_index, def, data, va, i) then
-				positions[#positions + 1] = va:position(i)
+				hpos_list[#hpos_list + 1] = minetest.hash_node_position(va:position(i))
 			end
 		end
-		if #positions > 0 then
-			poss_by_def[def_index] = positions
+		if #hpos_list > 0 then
+			if #hpos_list > spawnit.settings.max_positions_per_mapblock_per_rule then
+				hpos_list = futil.random.sample(hpos_list, spawnit.settings.max_positions_per_mapblock_per_rule)
+			end
+			local hpos_set = {} -- can't use Set cuz async env loses metatables
+			for i = 1, #hpos_list do
+				hpos_set[hpos_list[i]] = true
+			end
+			hpos_set_by_def[def_index] = hpos_set
 		end
 	end
 
-	return poss_by_def
-end
-
--- TODO: move to util
-local function cull_protected_positions(poss_by_def)
-	for df_index, positions in pairs(poss_by_def) do
-		local def = spawnit.registered_spawns[df_index]
-		local entity = def.entity
-		if not def.spawn_in_protected then
-			local filtered = {}
-			for i = 1, #positions do
-				local pos = positions[i]
-				if not minetest.is_protected(pos, entity) then
-					filtered[#filtered + 1] = pos
-				end
-			end
-			positions = filtered
-			poss_by_def[df_index] = positions
-		end
-		if #positions == 0 then
-			poss_by_def[df_index] = nil
-		end
-	end
+	return hpos_set_by_def
 end
 
 local dedicated_server_step = tonumber(minetest.settings:get("dedicated_server_step")) or 0.09
@@ -88,47 +78,46 @@ function spawnit.find_spawn_poss(block)
 	local blockpos = block:get_pos()
 	local hpos = block:hash()
 
-	if spawnit.spawn_poss_by_hpos[hpos] then
+	if spawnit.spawn_poss_by_block_hpos[hpos] then
 		return
 	end
 
-	spawnit.spawn_poss_by_hpos[hpos] = CALCULATING
+	spawnit.spawn_poss_by_block_hpos[hpos] = CALCULATING
 
 	spawnit.find_spawn_poss_queue:push_back(function()
-		local start = minetest.get_us_time()
+		local start = get_us_time()
 
 		local block_min, block_max = block:get_bounds()
 		local mob_extents = spawnit.mob_extents
 		local pmin = vector.offset(block_min, mob_extents[1], mob_extents[2], mob_extents[3])
 		local pmax = vector.offset(block_max, mob_extents[4], mob_extents[5], mob_extents[6])
 
-		local function callback(poss_by_def)
+		local function callback(hpos_set_by_def)
+			if spawnit.spawn_poss_by_block_hpos[hpos] ~= CALCULATING then
+				-- if this already got computed somehow, or removed, leave it alone.
+				return
+			end
 			spawnit.callback_queue:push_back(function()
-				if spawnit.spawn_poss_by_hpos[hpos] ~= CALCULATING then
+				if spawnit.spawn_poss_by_block_hpos[hpos] ~= CALCULATING then
 					-- if this already got computed somehow, or removed, leave it alone.
 					return
 				end
 
-				local start2 = minetest.get_us_time()
-				cull_protected_positions(poss_by_def)
-				local spawn_poss = spawnit.SpawnPositions(blockpos, poss_by_def)
-				spawnit.spawn_poss_by_hpos[hpos] = spawn_poss
-				for def_index in pairs(poss_by_def) do
-					spawnit.hposs_by_def[def_index]:add(hpos)
+				local start2 = get_us_time()
+				for def_index, hpos_set in pairs(hpos_set_by_def) do
+					hpos_set_by_def[def_index] = Set.convert(hpos_set)
 				end
-				spawnit.stats.async_callback_duration = spawnit.stats.async_callback_duration
-					+ (minetest.get_us_time() - start2)
+
+				local spawn_poss = spawnit.SpawnPositions(blockpos, hpos_set_by_def)
+				spawnit.spawn_poss_by_block_hpos[hpos] = spawn_poss
+				for def_index in pairs(hpos_set_by_def) do
+					spawnit.block_hposs_by_def[def_index]:add(hpos)
+				end
+				spawnit.stats.async_callback_duration = spawnit.stats.async_callback_duration + (get_us_time() - start2)
 			end)
 		end
 
-		minetest.handle_async(
-			async_call,
-			callback,
-			VoxelManip(pmin, pmax),
-			block_min,
-			block_max,
-			spawnit.registered_spawns -- TODO: *possibly* shove this into a file in the wolrdpath and load it into the async env
-		)
-		spawnit.stats.async_queue_duration = spawnit.stats.async_queue_duration + (minetest.get_us_time() - start)
+		handle_async(async_call, callback, VoxelManip(pmin, pmax), block_min, block_max)
+		spawnit.stats.async_queue_duration = spawnit.stats.async_queue_duration + (get_us_time() - start)
 	end)
 end
