@@ -31,6 +31,27 @@ set `mobs_spawn = false` in "minetest.conf"
 
 set `mob_core.spawn_enabled = false` ... somewhere? or am i just looking at yl's mangled mob_core?
 
+### water_life
+
+```lua
+table.insert_all(water_life.no_spawn_table, {
+	"water_life:alligator",
+	"water_life:beaver",
+	"water_life:clams",
+	"water_life:clownfish",
+	"water_life:coralfish",
+	"water_life:croc",
+	"water_life:gecko",
+	"water_life:gull",
+	"water_life:jellyfish",
+	"water_life:piranha",
+	"water_life:fish",
+	"water_life:urchin",
+	"water_life:shark",
+	"water_life:snake",
+	"water_life:whale",
+})
+```
 
 
 [^1]: usage of certain features, notably restrictions on the number of mobs in an area, are not constant-time.
