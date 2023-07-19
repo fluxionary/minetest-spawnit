@@ -125,13 +125,18 @@ function spawnit.is_valid_position(def_index, def, data, va, i)
 			can_be_near_by_def[def_index] = can_be_near
 		end
 
+		local near_any = false
 		local near_entity_indices = get_near_entity_indices(def, va, i)
 		for j = 1, #near_entity_indices do
 			local index = near_entity_indices[j]
 			local cid = data[index]
-			if not can_be_near(cid) then
-				return false
+			if can_be_near(cid) then
+				near_any = true
+				break
 			end
+		end
+		if not near_any then
+			return false
 		end
 	end
 
