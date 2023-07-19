@@ -17,9 +17,19 @@ for controlling mob spawns. see [API.md] for details on how to register mob spaw
   offloads the location of potential spawn locations to the async environment, and uses a constant-time[^1] algorithm
   to spawn
 
-* ~~cursing~~ currently the performance in guessing which parts of the map are active for entities are terrible.
-  actual finding spawn positions and spawning mobs is fast.
+## how to disable spawning in other mods
 
+### petz
+
+set `spawn_interval = math.huge` in "petz.conf"
+
+### mobs_redo
+
+set `mobs_spawn = false` in "minetest.conf"
+
+### mob_core
+
+set `mob_core.spawn_enabled = false` ... somewhere? or am i just looking at yl's mangled mob_core?
 
 
 
