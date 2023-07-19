@@ -104,6 +104,7 @@ end
 
 function spawnit.register(def)
 	validate_keys(def)
+	def = table.copy(def)
 	local entity_name = def.entity_name
 	if not entity_name then
 		error("attempt to register spawning w/out specifying entity")
@@ -127,8 +128,6 @@ function spawnit.register(def)
 	if not entity_def then
 		error(f("invalid entity specification %s", dump(entity_name)))
 	end
-
-	def = table.copy(def)
 	-- default values
 	def.type = def.type or "animal"
 	def.cluster = def.cluster or 1
