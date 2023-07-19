@@ -1,6 +1,6 @@
 spawnit:update_ao_period () float 5
 spawnit:spawn_mobs_period () float 12
-spawnit:too_far_ratio () float 1.33
+spawnit:too_far_ratio () float 2
 spawnit:hud_priv () string server
 spawnit:hud_update_period () float 5
 spawnit:spawn_chance_multiplier () float 1
