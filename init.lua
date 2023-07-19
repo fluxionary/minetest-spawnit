@@ -1,5 +1,5 @@
 fmod.check_version({ year = 2023, month = 7, day = 14 }) -- async_dofile
-futil.check_version({ year = 2023, month = 7, day = 14 })
+futil.check_version({ year = 2023, month = 7, day = 19 }) -- WeightedChooser
 action_queues.check_version({ year = 2023, month = 7, day = 17 }) -- namespace change
 
 spawnit = fmod.create()

@@ -13,20 +13,27 @@ local function try_spawn_mob(def_index, def)
 
 	for _, pos in ipairs(cluster) do
 		if final_check(def, pos) then
+			local entity_name
+			if type(def.entity_name) == "string" then
+				entity_name = def.entity_name
+			else
+				entity_name = def.chooser:next()
+			end
+
 			local obj
 			if def.generate_staticdata then
-				obj = minetest.add_entity(pos, def.entity_name, def.generate_staticdata(pos))
+				obj = minetest.add_entity(pos, entity_name, def.generate_staticdata(pos))
 			else
-				obj = minetest.add_entity(pos, def.entity_name)
+				obj = minetest.add_entity(pos, entity_name)
 			end
 			local spos = minetest.pos_to_string(pos)
 			if obj then
-				spawnit.log("action", "spawned %s @ %s", def.entity_name, spos)
+				spawnit.log("action", "spawned %s @ %s", entity_name, spos)
 				if def.after_spawn then
 					def.after_spawn(pos, obj)
 				end
 			else
-				spawnit.log("warning", "failed to spawn %s @ %s", def.entity_name, spos)
+				spawnit.log("warning", "failed to spawn %s @ %s", entity_name, spos)
 			end
 			spawnit.stats.num_spawned = spawnit.stats.num_spawned + 1
 			remove_spawn_position(def_index, pos)

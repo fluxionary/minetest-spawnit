@@ -37,7 +37,7 @@ spawnit.register({
 
 ```lua
 spawnit.register({
-	entity = "mymod:my_flying_mob",
+	entity_name = "mymod:my_flying_mob",
 
 	on = {"any"},
 	within = {"air"},
@@ -46,9 +46,22 @@ spawnit.register({
 
 ```lua
 spawnit.register({
-	entity = "mymod:my_swimming_mob",
+	entity_name = "mymod:my_swimming_mob",
 
 	on = {"any"},
 	within = {"group:water"},
+})
+```
+
+if you want to spawn different mob variants w/ various probabilities:
+```lua
+spawnit.register({
+	entity_name = {
+		["mobs_animal:sheep_white"] = 24,
+		["mobs_animal:sheep_black"] = 4,
+		["mobs_animal:sheep_brown"] = 2,
+		["mobs_animal:sheep_grey"] = 1,
+		["mobs_animal:sheep_dark_grey"] = 1,
+	},
 })
 ```

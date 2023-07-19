@@ -39,7 +39,7 @@ local function update_mob_extents(def)
 end
 
 local valid_keys = futil.Set({
-	"entity",
+	"entity_name",
 	"type",
 	"cluster",
 	"chance",
@@ -103,15 +103,30 @@ local function validate_nodes(nodes)
 end
 
 function spawnit.register(def)
-	local entity = def.entity_name
-	if not entity then
+	validate_keys(def)
+	local entity_name = def.entity_name
+	if not entity_name then
 		error("attempt to register spawning w/out specifying entity")
 	end
-	local entity_def = minetest.registered_entities[entity]
-	if not entity_def then
-		error(f("attempt to register spawning for unknown entity %s", entity))
+	local entity_def
+	if type(entity_name) == "string" then
+		entity_def = minetest.registered_entities[entity_name]
+		if not entity_def then
+			error(f("attempt to register spawning for unknown entity %s", entity_name))
+		end
+	elseif type(entity_name) == "table" then
+		for kind in pairs(entity_name) do
+			local kind_def = minetest.registered_entities[kind]
+			if not kind_def then
+				error(f("attempt to register spawning for unknown entity %s", kind))
+			end
+			entity_def = entity_def or kind_def -- use the first one to calculate the collisionbox
+		end
+		def.chooser = futil.random.WeightedChooser(entity_name)
 	end
-	validate_keys(def)
+	if not entity_def then
+		error(f("invalid entity specification %s", dump(entity_name)))
+	end
 
 	def = table.copy(def)
 	-- default values
@@ -156,7 +171,7 @@ function spawnit.register(def)
 	)
 	table.insert(spawnit.registered_spawns, def)
 	if def.max_active > 0 then
-		spawnit.count_active_mobs(entity)
+		spawnit.count_active_mobs(entity_name)
 	end
 
 	update_mob_extents(def)
