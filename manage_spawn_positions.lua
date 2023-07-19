@@ -108,6 +108,10 @@ function spawnit.find_spawn_poss(block_hpos)
 		return
 	end
 
+	if spawnit.find_spawn_poss_queue:size() >= s.max_queue_size then
+		return true -- indicate that the caller should stop adding things
+	end
+
 	spawnit.spawn_poss_by_block_hpos[block_hpos] = CALCULATING
 
 	spawnit.find_spawn_poss_queue:push_back(function()

@@ -8,3 +8,5 @@ spawnit:queue_us_per_s () float 3000
 spawnit:player_move_too_fast_ratio () float 1.5
 spawnit:max_positions_per_mapblock_per_rule () float 128
 spawnit:track_memory_usage () bool false
+spawnit:max_queue_size () int 300
+spawnit:max_add_to_queue_per_ao_period (100) int 100

@@ -8,9 +8,11 @@ local get_us_time = minetest.get_us_time
 local hash_node_position = minetest.hash_node_position
 
 local Set = futil.Set
+local get_block_center = futil.vector.get_block_center
 local get_block_min = futil.vector.get_block_min
 local get_blockpos = futil.vector.get_blockpos
 local is_blockpos_inside_world_bounds = futil.vector.is_blockpos_inside_world_bounds
+local shuffle = futil.table.shuffle
 
 local s = spawnit.settings
 
@@ -196,7 +198,12 @@ futil.register_globalstep({
 		end
 
 		-- finally, queue up processing of spawn positions
-		for i = 1, #block_hposs_without_spawn_poss do
+		table.sort(block_hposs_without_spawn_poss, function(block_hpos1, block_hpos2)
+			local block_center1 = get_block_center(get_position_from_hash(block_hpos1))
+			local block_center2 = get_block_center(get_position_from_hash(block_hpos2))
+			return player_pos:distance(block_center1) < player_pos:distance(block_center2)
+		end)
+		for i = 1, math.min(#block_hposs_without_spawn_poss, s.max_add_to_queue_per_ao_period) do
 			local block_hpos = block_hposs_without_spawn_poss[i]
 			local blockpos = get_position_from_hash(block_hpos)
 			local pos = get_block_min(blockpos)
@@ -238,12 +245,17 @@ futil.register_globalstep({
 			local nearby = spawnit.nearby_players_by_block_hpos[hpos]
 			nearby:add(FORCELOAD)
 		end
-		for i = 1, #need_to_find_spawn_poss do
+
+		shuffle(need_to_find_spawn_poss)
+		for i = 1, math.min(#need_to_find_spawn_poss, s.max_add_to_queue_per_ao_period) do
 			local block_hpos = need_to_find_spawn_poss[i]
 			local blockpos = get_position_from_hash(block_hpos)
 			local pos = get_block_min(blockpos)
 			if compare_block_status(pos, "active") or compare_block_status(pos, "loaded") then
-				spawnit.find_spawn_poss(block_hpos)
+				if spawnit.find_spawn_poss(block_hpos) then
+					-- queue is full
+					break
+				end
 			end
 		end
 		previous_forceloaded = forceloaded
