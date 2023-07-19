@@ -192,9 +192,12 @@ local function check_pos_for_cluster(def, pos)
 		return false
 	end
 
+	-- TODO: use futil.math.in_bounds
 	if def.min_light > light or light > def.max_light then
 		return false
 	end
+
+	-- TODO: should we also check artificial and natural light? probably
 
 	-- protection could have changed, so check again
 	if (not def.spawn_in_protected) and minetest.is_protected(pos, def.entity_name) then
@@ -222,6 +225,7 @@ function spawnit.util.pick_a_cluster(def_index, def)
 	end
 	local poss = {}
 	for _ = 1, 5 do
+		-- TODO: we ought to keep from checking the same block twice here (futil.random.sample?)
 		local block_hpos = block_hposs_list[math_random(#block_hposs_list)]
 		local spawn_poss = spawnit.spawn_poss_by_block_hpos[block_hpos]
 		if spawn_poss then
@@ -271,6 +275,7 @@ function spawnit.util.is_block_in_sight(blockpos, camera_pos, camera_dir, camera
 	return cosangle >= math_cos(camera_fov * 0.55)
 end
 
+-- we have no way of telling what the client's desired FOV is. if the server isn't overriding it, assume 72 degrees.
 function spawnit.util.get_fov(player)
 	local fov, is_multiplier = player:get_fov()
 	if is_multiplier then
@@ -281,7 +286,7 @@ function spawnit.util.get_fov(player)
 	return deg2rad(fov)
 end
 
--- used to remove cached data when it's no longer relevant
+-- if a block is too far from a player, we will remove it from the cached data.
 function spawnit.util.is_too_far(player_pos, block_hpos)
 	local blockpos = get_position_from_hash(block_hpos)
 	local center = get_block_center(blockpos)
