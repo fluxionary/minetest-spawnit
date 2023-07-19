@@ -103,7 +103,7 @@ local function validate_nodes(nodes)
 end
 
 function spawnit.register(def)
-	local entity = def.entity
+	local entity = def.entity_name
 	if not entity then
 		error("attempt to register spawning w/out specifying entity")
 	end
@@ -162,10 +162,23 @@ function spawnit.register(def)
 	update_mob_extents(def)
 end
 
+function spawnit.clear_spawns(entity_name)
+	for i = #spawnit.registered_spawns, 1, -1 do
+		if spawnit.registered_spawns[i].entity_name == entity_name then
+			table.remove(spawnit.registered_spawns, i)
+		end
+	end
+end
+
 minetest.register_on_mods_loaded(function()
 	local contents = minetest.serialize(spawnit.registered_spawns)
 	local filename = futil.path_concat(minetest.get_worldpath(), "spawnit_rules.serialized")
 	futil.write_file(filename, contents)
 
-	spawnit.register = nil
+	spawnit.register = function()
+		error("cannot register new spawns after mods are loaded.")
+	end
+	spawnit.clear_spawnsr = function()
+		error("cannot clear spawns after mods are loaded.")
+	end
 end)

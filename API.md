@@ -2,15 +2,17 @@
 -- https://gitea.your-land.de/your-land/bugtracker/issues/4592
 
 spawnit.register({
-	entity = "mymod:my_walking_mob",
-    type = "monster",  -- or "npc" or "animal", or something custom
-    cluster = 1, -- maximum amount to spawn at once (cluster is within a single mapblock)
-    chance = 100, -- there will be a 1 in 100 chance of spawning a mob per second
-    per_player = false, -- if true, there will be a 1 in 100 chance of spawning a mob every second per connected player
+	entity_name = "mymod:my_walking_mob",
+	type = "monster",  -- or "npc" or "animal", or something custom
+	cluster = 1, -- maximum amount to spawn at once (cluster is within a single mapblock)
+	chance = 100, -- there will be a 1 in 100 chance of trying to spawn the mob (or cluster) per second, ish
+	per_player = false, -- if true, there will be a 1 in 100 chance of spawning a mob every second per connected player
 
+	-- TODO: allow and/or/not/parentheses for these things
+	-- WARNING: that might break something!
 	on = {"node"}, -- any solid full node. or, list of nodes, groups, "walkable" for any solid node (incl. mesh/nodebox)
-	within = {"not walkable"},
-    near = {"any"},  -- TODO: implement
+	within = {"not walkable"},  -- all of the mob must be within these nodes
+	near = {"any"},  -- mob must be "touching" these. intersects "on".
 	min_y = 0,
 	max_y = 100,
 	min_light = 0,
@@ -21,16 +23,13 @@ spawnit.register({
 	min_player_distance = 12,
 	max_player_distance = nil,
 
-    max_active = 100,
-    max_in_area = 10,
-    max_in_area_radius = 16,
+	max_active = 100,
+	max_in_area = 10,
+	max_in_area_radius = 16,
 
-    collisionbox = nil, -- if not defined, this is inferred from the entity's definition
+	collisionbox = nil, -- if not defined, this is inferred from the entity's definition
 
-    -- biome = { ".*" },  -- TODO: this isn't reliable anyway, maybe implement later
-	...,  -- TODO other things?
-
-    should_spawn = function()  end,
+	should_spawn = function()  end,
 	check_pos = function(pos) end,  -- return true to allow spawning at that position, false to disallow
 	after_spawn = function(pos, obj) end,  -- called after a mob has spawned
 })

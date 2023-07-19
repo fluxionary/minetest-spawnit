@@ -2,6 +2,7 @@ local math_ceil = math.ceil
 local math_cos = math.cos
 local math_floor = math.floor
 local math_max = math.max
+local math_min = math.min
 local math_pi = math.pi
 local math_random = math.random
 
@@ -66,9 +67,9 @@ function spawnit.util.get_in_entity_indices(def, va, i)
 	local pos0 = va:position(i)
 	local x0, y0, z0 = pos0.x, pos0.y, pos0.z
 	local indices = {}
-	for y = y0 + math_floor(cb[2] + 0.5), y0 + math_ceil(cb[5] - 0.5) do
-		for x = x0 + math_floor(cb[1] + 0.5), x0 + math_ceil(cb[4] - 0.5) do
-			for z = z0 + math_floor(cb[3] + 0.5), z0 + math_ceil(cb[6] - 0.5) do
+	for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do
+		for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
+			for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
@@ -82,63 +83,65 @@ function spawnit.util.get_under_entity_indices(def, va, i)
 	local x0, y0, z0 = pos0.x, pos0.y, pos0.z
 	local indices = {}
 	local y = y0 + math_floor(cb[2] + 0.5) - 1
-	for x = x0 + math_floor(cb[1] + 0.5), x0 + math_ceil(cb[4] - 0.5) do
-		for z = z0 + math_floor(cb[3] + 0.5), z0 + math_ceil(cb[6] - 0.5) do
+	for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
+		for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
 			indices[#indices + 1] = va:index(x, y, z)
 		end
 	end
 	return indices
 end
 
+-- get nodes touching the entity on 6 faces. does't (usually?) include edges and corners of the bounding box
+-- TODO this is confusing, is there a way we can make the calculations easier to understand?
 function spawnit.util.get_near_entity_indices(def, va, i)
 	local cb = def.collisionbox
 	local pos0 = va:position(i)
 	local x0, y0, z0 = pos0.x, pos0.y, pos0.z
 	local indices = {}
-	do
+	do -- left x face
 		local x = x0 + math_floor(cb[1] + 0.5) - 1
-		for y = y0 + math_floor(cb[2] + 0.5), y0 + math_ceil(cb[5] - 0.5) do
-			for z = z0 + math_floor(cb[3] + 0.5), z0 + math_ceil(cb[6] - 0.5) do
+		for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do
+			for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
 	end
-	do
-		local x = x0 + math_floor(cb[4] - 0.5) + 1
-		for y = y0 + math_floor(cb[2] + 0.5), y0 + math_ceil(cb[5] - 0.5) do
-			for z = z0 + math_floor(cb[3] + 0.5), z0 + math_ceil(cb[6] - 0.5) do
+	do -- right x face
+		local x = x0 + math_ceil(cb[4] - 0.5) + 1
+		for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do
+			for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
 	end
-	do
+	do -- bottom y face
 		local y = y0 + math_floor(cb[2] + 0.5) - 1
-		for x = x0 + math_floor(cb[1] + 0.5), x0 + math_ceil(cb[4] - 0.5) do
-			for z = z0 + math_floor(cb[3] + 0.5), z0 + math_ceil(cb[6] - 0.5) do
+		for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
+			for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
 	end
-	do
-		local y = y0 + math_floor(cb[5] - 0.5) + 1
-		for x = x0 + math_floor(cb[1] + 0.5), x0 + math_ceil(cb[4] - 0.5) do
-			for z = z0 + math_floor(cb[3] + 0.5), z0 + math_ceil(cb[6] - 0.5) do
+	do -- top y face
+		local y = y0 + math_ceil(cb[5] - 0.5) + 1
+		for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
+			for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
 	end
-	do
+	do -- low z face
 		local z = z0 + math_floor(cb[3] + 0.5) - 1
-		for x = x0 + math_floor(cb[1] + 0.5), x0 + math_ceil(cb[4] - 0.5) do
-			for y = y0 + math_floor(cb[2] + 0.5), y0 + math_ceil(cb[5] - 0.5) do
+		for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
+			for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
 	end
-	do
-		local z = z0 + math_floor(cb[6] - 0.5) + 1
-		for x = x0 + math_floor(cb[1] + 0.5), x0 + math_ceil(cb[4] - 0.5) do
-			for y = y0 + math_floor(cb[2] + 0.5), y0 + math_ceil(cb[5] - 0.5) do
+	do -- high z face
+		local z = z0 + math_ceil(cb[6] - 0.5) + 1
+		for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
+			for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
@@ -163,7 +166,7 @@ function spawnit.util.should_spawn(def, period, num_players)
 		end
 	end
 
-	if def.max_active and def.max_active > 0 and spawnit.get_active_count(def.entity) >= def.max_active then
+	if def.max_active and def.max_active > 0 and spawnit.get_active_count(def.entity_name) >= def.max_active then
 		return false
 	end
 
@@ -194,7 +197,7 @@ local function check_pos_for_cluster(def, pos)
 	end
 
 	-- protection could have changed, so check again
-	if (not def.spawn_in_protected) and minetest.is_protected(pos, def.entity) then
+	if (not def.spawn_in_protected) and minetest.is_protected(pos, def.entity_name) then
 		return false
 	end
 
@@ -293,7 +296,7 @@ function spawnit.util.final_check(def, pos)
 		local objs = get_objects_inside_radius(pos, radius)
 		for i = 1, #objs do
 			local e = objs[i]:get_luaentity()
-			if e and e.name == def.entity then
+			if e and e.name == def.entity_name then
 				count = count + 1
 				if count >= def.max_in_area then
 					return false
@@ -357,7 +360,7 @@ function spawnit.util.cull_protected_positions(hpos_set_by_def)
 	local is_protected = minetest.is_protected
 	for def_index, hpos_set in pairs(hpos_set_by_def) do
 		local def = spawnit.registered_spawns[def_index]
-		local entity = def.entity
+		local entity = def.entity_name
 		local any_left = false
 		if not def.spawn_in_protected then
 			for hpos in hpos_set:iterate() do

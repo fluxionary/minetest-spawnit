@@ -15,18 +15,18 @@ local function try_spawn_mob(def_index, def)
 		if final_check(def, pos) then
 			local obj
 			if def.generate_staticdata then
-				obj = minetest.add_entity(pos, def.entity, def.generate_staticdata(pos))
+				obj = minetest.add_entity(pos, def.entity_name, def.generate_staticdata(pos))
 			else
-				obj = minetest.add_entity(pos, def.entity)
+				obj = minetest.add_entity(pos, def.entity_name)
 			end
 			local spos = minetest.pos_to_string(pos)
 			if obj then
-				spawnit.log("action", "spawned %s @ %s", def.entity, spos)
+				spawnit.log("action", "spawned %s @ %s", def.entity_name, spos)
 				if def.after_spawn then
 					def.after_spawn(pos, obj)
 				end
 			else
-				spawnit.log("warning", "failed to spawn %s @ %s", def.entity, spos)
+				spawnit.log("warning", "failed to spawn %s @ %s", def.entity_name, spos)
 			end
 			spawnit.stats.num_spawned = spawnit.stats.num_spawned + 1
 			remove_spawn_position(def_index, pos)
