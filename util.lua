@@ -151,10 +151,6 @@ end
 
 -- probabilistic; should return true approximately once per `def.chance` seconds, if other conditions are met
 function spawnit.util.should_spawn(def, period, num_players)
-	if def.should_spawn and not def.should_spawn() then
-		return false
-	end
-
 	local r = math_random()
 	if def.per_player then
 		if r >= (period * num_players) / (def.chance * s.spawn_chance_multiplier) then
@@ -179,6 +175,10 @@ function spawnit.util.should_spawn(def, period, num_players)
 		if not (tod <= def.min_time_of_day or def.max_time_of_day <= tod) then
 			return false
 		end
+	end
+
+	if def.should_spawn and not def.should_spawn() then
+		return false
 	end
 
 	return true
