@@ -207,7 +207,7 @@ futil.register_globalstep({
 			local block_hpos = block_hposs_without_spawn_poss[i]
 			local blockpos = get_position_from_hash(block_hpos)
 			local pos = get_block_min(blockpos)
-			if compare_block_status(pos, "active") or compare_block_status(pos, "loaded") then
+			if compare_block_status(pos, "loaded") then
 				spawnit.find_spawn_poss(block_hpos)
 			end
 		end
@@ -251,7 +251,7 @@ futil.register_globalstep({
 			local block_hpos = need_to_find_spawn_poss[i]
 			local blockpos = get_position_from_hash(block_hpos)
 			local pos = get_block_min(blockpos)
-			if compare_block_status(pos, "active") or compare_block_status(pos, "loaded") then
+			if compare_block_status(pos, "loaded") then
 				if spawnit.find_spawn_poss(block_hpos) then
 					-- queue is full
 					break
