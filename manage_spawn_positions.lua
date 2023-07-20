@@ -40,24 +40,28 @@ end)
 local function async_call(vm, block_min, block_max)
 	local va = VoxelArea(vm:get_emerged_area())
 	local data = vm:get_data()
+	local min_y = block_min.y
+	local max_y = block_max.y
 
 	local hpos_set_by_def = {}
 	for def_index, def in ipairs(spawnit.registered_spawns) do
-		local hpos_list = {}
-		for i in va:iterp(block_min, block_max) do
-			if spawnit.is_valid_position(def_index, def, data, va, i) then
-				hpos_list[#hpos_list + 1] = minetest.hash_node_position(va:position(i))
+		if def.max_y <= min_y and def.min_y <= max_y then
+			local hpos_list = {}
+			for i in va:iterp(block_min, block_max) do
+				if spawnit.is_valid_position(def_index, def, data, va, i) then
+					hpos_list[#hpos_list + 1] = minetest.hash_node_position(va:position(i))
+				end
 			end
-		end
-		if #hpos_list > 0 then
-			if #hpos_list > spawnit.settings.max_positions_per_mapblock_per_rule then
-				hpos_list = futil.random.sample(hpos_list, spawnit.settings.max_positions_per_mapblock_per_rule)
+			if #hpos_list > 0 then
+				if #hpos_list > spawnit.settings.max_positions_per_mapblock_per_rule then
+					hpos_list = futil.random.sample(hpos_list, spawnit.settings.max_positions_per_mapblock_per_rule)
+				end
+				local hpos_set = {} -- can't use futil.Set cuz async env loses metatables
+				for i = 1, #hpos_list do
+					hpos_set[hpos_list[i]] = true
+				end
+				hpos_set_by_def[def_index] = hpos_set
 			end
-			local hpos_set = {} -- can't use Set cuz async env loses metatables
-			for i = 1, #hpos_list do
-				hpos_set[hpos_list[i]] = true
-			end
-			hpos_set_by_def[def_index] = hpos_set
 		end
 	end
 

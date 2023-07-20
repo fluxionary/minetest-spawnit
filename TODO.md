@@ -18,3 +18,4 @@
 * if your priv gets revoked, you can't disable the HUD...
 * break up "too far" calculations into separate xz and y factors
 * don't check every spawn rule every cycle, and compensate for the increased time between checks
+* add way to toggle/filter spawns during runtime?

@@ -85,13 +85,17 @@ local can_be_in_by_def = {}
 local can_be_on_by_def = {}
 local can_be_near_by_def = {}
 
-function spawnit.is_valid_position(def_index, def, data, va, i)
+local function get_can_be_in(def_index, def)
 	local can_be_in = can_be_in_by_def[def_index]
 	if not can_be_in then
 		can_be_in = build_can_be(def.within)
 		can_be_in_by_def[def_index] = can_be_in
 	end
+	return can_be_in
+end
 
+local function check_can_be_in(def_index, def, data, va, i)
+	local can_be_in = get_can_be_in(def_index, def)
 	local in_entity_indices = get_in_entity_indices(def, va, i)
 	for j = 1, #in_entity_indices do
 		local index = in_entity_indices[j]
@@ -100,42 +104,76 @@ function spawnit.is_valid_position(def_index, def, data, va, i)
 			return false
 		end
 	end
+	return true
+end
+
+local function get_can_be_on(def_index, def)
+	local can_be_on = can_be_on_by_def[def_index]
+	if not can_be_on then
+		can_be_on = build_can_be(def.on)
+		can_be_on_by_def[def_index] = can_be_on
+	end
+	return can_be_on
+end
+
+local function check_can_be_on(def_index, def, data, va, i)
+	local can_be_on = get_can_be_on(def_index, def)
+
+	local under_entity_indices = get_under_entity_indices(def, va, i)
+	for j = 1, #under_entity_indices do
+		local index = under_entity_indices[j]
+		local cid = data[index]
+		if not can_be_on(cid) then
+			return false
+		end
+	end
+
+	return true
+end
+
+local function get_can_be_near(def_index, def)
+	local can_be_near = can_be_near_by_def[def_index]
+	if not can_be_near then
+		can_be_near = build_can_be(def.near)
+		can_be_near_by_def[def_index] = can_be_near
+	end
+end
+
+local function check_is_near(def_index, def, data, va, i)
+	local can_be_near = get_can_be_near(def_index, def)
+
+	local near_any = false
+	local near_entity_indices = get_near_entity_indices(def, va, i)
+	for j = 1, #near_entity_indices do
+		local index = near_entity_indices[j]
+		local cid = data[index]
+		if can_be_near(cid) then
+			near_any = true
+			break
+		end
+	end
+
+	return near_any
+end
+
+function spawnit.is_valid_position(def_index, def, data, va, i)
+	local pos = va:position(i)
+	if not (def.min_y <= pos.y and pos.y <= def.max_y) then
+		return false
+	end
+
+	if not check_can_be_in(def_index, def, data, va, i) then
+		return false
+	end
 
 	if spawns_on_something(def) then
-		local can_be_on = can_be_on_by_def[def_index]
-		if not can_be_on then
-			can_be_on = build_can_be(def.on)
-			can_be_on_by_def[def_index] = can_be_on
-		end
-
-		local under_entity_indices = get_under_entity_indices(def, va, i)
-		for j = 1, #under_entity_indices do
-			local index = under_entity_indices[j]
-			local cid = data[index]
-			if not can_be_on(cid) then
-				return false
-			end
+		if not check_can_be_on(def_index, def, data, va, i) then
+			return false
 		end
 	end
 
 	if spawns_near_something(def) then
-		local can_be_near = can_be_near_by_def[def_index]
-		if not can_be_near then
-			can_be_near = build_can_be(def.near)
-			can_be_near_by_def[def_index] = can_be_near
-		end
-
-		local near_any = false
-		local near_entity_indices = get_near_entity_indices(def, va, i)
-		for j = 1, #near_entity_indices do
-			local index = near_entity_indices[j]
-			local cid = data[index]
-			if can_be_near(cid) then
-				near_any = true
-				break
-			end
-		end
-		if not near_any then
+		if not check_is_near(def_index, def, data, va, i) then
 			return false
 		end
 	end
