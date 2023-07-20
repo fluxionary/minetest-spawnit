@@ -48,12 +48,12 @@ minetest.register_on_leaveplayer(function(player)
 	local nearby_block_hpos_set = spawnit.nearby_block_hpos_set_by_player_name[player_name]
 	for hpos in nearby_block_hpos_set:iterate() do
 		local visibility = spawnit.visibility_by_block_hpos[hpos]
-		visibility:remove(player_name)
+		visibility:discard(player_name)
 		if visibility:is_empty() then
 			spawnit.visibility_by_block_hpos[hpos] = nil
 		end
 		local nearby = spawnit.nearby_players_by_block_hpos[hpos]
-		nearby:remove(player_name)
+		nearby:discard(player_name)
 		if nearby:is_empty() then
 			spawnit.nearby_players_by_block_hpos[hpos] = nil
 			spawnit.clear_spawn_poss(hpos)
@@ -226,12 +226,12 @@ futil.register_globalstep({
 		local need_to_find_spawn_poss = {}
 		for hpos in (previous_forceloaded - forceloaded):iterate() do
 			local visibility = spawnit.visibility_by_block_hpos[hpos]
-			visibility:remove(FORCELOAD)
+			visibility:discard(FORCELOAD)
 			if visibility:is_empty() then
 				spawnit.visibility_by_block_hpos[hpos] = nil
 			end
 			local nearby = spawnit.nearby_players_by_block_hpos[hpos]
-			nearby:remove(FORCELOAD)
+			nearby:discard(FORCELOAD)
 			if nearby:is_empty() then
 				spawnit.clear_spawn_poss(hpos)
 			end
