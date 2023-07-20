@@ -58,10 +58,16 @@ local default_values = {
 	max_in_area = -1,
 	max_in_area_radius = 16,
 }
-default_values.__index = default_values
+
+local function set_default_values(t)
+	for key, default in pairs(default_values) do
+		t[key] = futil.coalesce(t[key], default)
+	end
+end
 
 local valid_keys = futil.Set({
 	"entity_name",
+	"groups",
 	"cluster",
 	"chance",
 	"per_player",
@@ -91,7 +97,7 @@ local valid_keys = futil.Set({
 local function validate_keys(def)
 	for key in pairs(def) do
 		if not valid_keys:contains(key) then
-			error(f("unexpected spawn definition key %s", key))
+			error(f("unexpected spawn definition key %q", key))
 		end
 	end
 end
@@ -126,7 +132,8 @@ end
 
 function spawnit.register(def, do_validate_nodes)
 	validate_keys(def)
-	def = setmetatable(table.copy(def), default_values)
+	def = table.copy(def)
+	set_default_values(def)
 	local entity_name = def.entity_name
 	if not entity_name then
 		error("attempt to register spawning w/out specifying entity")
