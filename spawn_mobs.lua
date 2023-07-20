@@ -1,3 +1,7 @@
+local get_us_time = minetest.get_us_time
+
+local sample_with_indices = futil.random.sample_with_indices
+
 local s = spawnit.settings
 
 local should_spawn = spawnit.util.should_spawn
@@ -46,13 +50,27 @@ futil.register_globalstep({
 	period = s.spawn_mobs_period,
 	catchup = "single",
 	func = function(period)
-		local start = minetest.get_us_time()
+		local start = get_us_time()
 		local num_players = #minetest.get_connected_players()
-		for def_index, def in ipairs(spawnit.registered_spawns) do
-			if should_spawn(def, period, num_players) then
-				try_spawn_mob(def_index, def)
+		local registered_spawns = spawnit.registered_spawns
+		local num_spawn_rules = #registered_spawns
+		local max_spawn_rules_per_iteration = s.max_spawn_rules_per_iteration
+		if num_spawn_rules <= max_spawn_rules_per_iteration then
+			for def_index = 1, num_spawn_rules do
+				local def = registered_spawns[def_index]
+				if should_spawn(def, period, num_players) then
+					try_spawn_mob(def_index, def)
+				end
+			end
+		else
+			local sample = sample_with_indices(registered_spawns, max_spawn_rules_per_iteration)
+			for i = 1, max_spawn_rules_per_iteration do
+				local def_index, def = unpack(sample[i])
+				if should_spawn(def, period * num_spawn_rules / max_spawn_rules_per_iteration, num_players) then
+					try_spawn_mob(def_index, def)
+				end
 			end
 		end
-		spawnit.stats.spawn_mobs_duration = spawnit.stats.spawn_mobs_duration + (minetest.get_us_time() - start)
+		spawnit.stats.spawn_mobs_duration = spawnit.stats.spawn_mobs_duration + (get_us_time() - start)
 	end,
 })
