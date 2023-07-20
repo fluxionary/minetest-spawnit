@@ -92,13 +92,13 @@ function spawnit.util.get_under_entity_indices(def, va, i)
 	return indices
 end
 
--- get nodes touching the entity on 6 faces. does't (usually?) include edges and corners of the bounding box
+-- get nodes touching the entity on 6 faces. doesn't (usually?) include edges and corners of the bounding box
 -- TODO this is confusing, is there a way we can make the calculations easier to understand?
 function spawnit.util.get_near_entity_indices(def, va, i)
 	local cb = def.collisionbox
 	local pos0 = va:position(i)
 	local x0, y0, z0 = pos0.x, pos0.y, pos0.z
-	local indices = {}
+	local indices = spawnit.util.get_in_entity_indices(def, va, i)
 	do -- left x face
 		local x = x0 + math_floor(cb[1] + 0.5) - 1
 		for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do

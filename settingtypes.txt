@@ -11,4 +11,4 @@ spawnit:max_positions_per_mapblock_per_rule () float 128
 spawnit:track_memory_usage () bool false
 spawnit:max_queue_size () int 300
 spawnit:max_add_to_queue_per_ao_period () int 100
-spawnit:max_spawn_rules_per_iteration () int 20
+spawnit:max_spawn_rules_per_iteration () int 40

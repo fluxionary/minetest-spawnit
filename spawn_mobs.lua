@@ -64,9 +64,10 @@ futil.register_globalstep({
 			end
 		else
 			local sample = sample_with_indices(registered_spawns, max_spawn_rules_per_iteration)
+			local adjusted_period = period * num_spawn_rules / max_spawn_rules_per_iteration
 			for i = 1, max_spawn_rules_per_iteration do
 				local def_index, def = unpack(sample[i])
-				if should_spawn(def, period * num_spawn_rules / max_spawn_rules_per_iteration, num_players) then
+				if should_spawn(def, adjusted_period, num_players) then
 					try_spawn_mob(def_index, def)
 				end
 			end
