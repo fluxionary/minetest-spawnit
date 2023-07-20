@@ -3,16 +3,16 @@
 
 spawnit.register({
 	entity_name = "mymod:my_walking_mob",
-	type = "monster",  -- or "npc" or "animal", or something custom
+	groups = { monster = 1 },  -- or "npc" or "animal", or something custom
 	cluster = 1, -- maximum amount to spawn at once (cluster is within a single mapblock)
 	chance = 100, -- there will be a 1 in 100 chance of trying to spawn the mob (or cluster) per second, ish
 	per_player = false, -- if true, there will be a 1 in 100 chance of spawning a mob every second per connected player
 
 	-- TODO: allow and/or/not/parentheses for these things
 	-- WARNING: that might break something!
-	on = {"node"}, -- any solid full node. or, list of nodes, groups, "walkable" for any solid node (incl. mesh/nodebox)
-	within = {"not walkable"},  -- all of the mob must be within these nodes
-	near = {"any"},  -- mob must be "touching" these. intersects "on".
+	on = { "node" }, -- any solid full node. or, list of nodes, groups, "walkable" for any solid node (incl. mesh/nodebox)
+	within = { "not walkable" },  -- all of the mob must be within these nodes
+	near = { "any" },  -- mob must be "touching" these. intersects "on".
 	min_y = 0,
 	max_y = 100,
 	min_light = 0,
@@ -64,4 +64,9 @@ spawnit.register({
 		["mobs_animal:sheep_dark_grey"] = 1,
 	},
 })
+```
+
+remove all spawn rules for some mob. note that any changes to the spawn rules *MUST* be done *BEFORE* `on_mods_loaded`!
+```lua
+spawnit.clear_spawns("mymod:my_walking_mob")
 ```

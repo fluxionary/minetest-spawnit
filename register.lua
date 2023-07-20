@@ -10,7 +10,9 @@ local MAX_Y = MAXP.y
 -- extent of halo around a mapblock that we need to check to see whether mobs fit
 spawnit.mob_extents = { 0, 0, 0, 0, 0, 0 }
 
+-- warning: do NOT modify the following after `on_mods_loaded`!!!
 spawnit.registered_spawns = {}
+spawnit.relevant_mobs = futil.Set()
 
 local function update_mob_extents(def)
 	local collisionbox = def.collisionbox
@@ -38,9 +40,28 @@ local function update_mob_extents(def)
 	end
 end
 
+local default_values = {
+	cluster = 1,
+	chance = 300,
+	per_player = true,
+	on = { "node" },
+	within = { "breathable" },
+	near = { "any" },
+	min_y = MIN_Y,
+	max_y = MAX_Y,
+	min_light = 0,
+	max_light = 15,
+	min_time_of_day = 0,
+	max_time_of_day = 1,
+	spawn_in_protected = true,
+	max_active = -1,
+	max_in_area = -1,
+	max_in_area_radius = 16,
+}
+default_values.__index = default_values
+
 local valid_keys = futil.Set({
 	"entity_name",
-	"type",
 	"cluster",
 	"chance",
 	"per_player",
@@ -58,6 +79,7 @@ local valid_keys = futil.Set({
 	"max_player_distance",
 	"max_active",
 	"max_in_area",
+	"max_any_in_area",
 	"max_in_area_radius",
 	"collisionbox",
 
@@ -102,9 +124,9 @@ local function validate_nodes(nodes)
 	end
 end
 
-function spawnit.register(def)
+function spawnit.register(def, do_validate_nodes)
 	validate_keys(def)
-	def = table.copy(def)
+	def = setmetatable(table.copy(def), default_values)
 	local entity_name = def.entity_name
 	if not entity_name then
 		error("attempt to register spawning w/out specifying entity")
@@ -128,39 +150,23 @@ function spawnit.register(def)
 	if not entity_def then
 		error(f("invalid entity specification %s", dump(entity_name)))
 	end
-	-- default values
-	def.type = def.type or "animal"
-	def.cluster = def.cluster or 1
 	assert(def.cluster >= 1)
-	def.chance = def.chance or 300
 	assert(def.chance > 0)
-	def.per_player = futil.coalesce(def.per_player, true)
-	def.on = def.on or { "node" }
-	validate_nodes(def.on)
-	def.within = def.within or { "breathable" }
-	validate_nodes(def.within)
-	def.near = def.near or { "any" }
-	validate_nodes(def.near)
-	def.min_y = def.min_y or MIN_Y
-	def.max_y = def.max_y or MAX_Y
+	if do_validate_nodes then
+		validate_nodes(def.on)
+		validate_nodes(def.within)
+		validate_nodes(def.near)
+	end
 	assert(def.min_y <= def.max_y, f("max_y (%i) < min_y (%i); mob cannot spawn", def.max_y, def.min_y))
-	def.min_light = def.min_light or 0
-	def.max_light = def.max_light or 15
 	assert(
 		def.min_light <= def.max_light,
 		f("min_light (%i) < max_light (%i); mob cannot spawn", def.min_light, def.max_light)
 	)
-	def.min_time_of_day = def.min_time_of_day or 0
-	def.max_time_of_day = def.max_time_of_day or 1
 	assert(def.min_time_of_day ~= def.max_time_of_day)
-	def.spawn_in_protected = futil.coalesce(def.spawn_in_protected, true)
 	assert(
 		not def.min_player_distance or not def.max_player_distance or def.min_player_distance <= def.max_player_distance
 	)
-	def.max_active = def.max_active or -1
 	assert(def.max_active ~= 0)
-	def.max_in_area = def.max_in_area or -1
-	def.max_in_area_radius = 16
 
 	def.collisionbox = (
 		def.collisionbox
@@ -192,7 +198,7 @@ minetest.register_on_mods_loaded(function()
 	spawnit.register = function()
 		error("cannot register new spawns after mods are loaded.")
 	end
-	spawnit.clear_spawnsr = function()
+	spawnit.clear_spawns = function()
 		error("cannot clear spawns after mods are loaded.")
 	end
 end)
