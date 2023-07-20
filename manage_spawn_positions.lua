@@ -45,7 +45,7 @@ local function async_call(vm, block_min, block_max)
 
 	local hpos_set_by_def = {}
 	for def_index, def in ipairs(spawnit.registered_spawns) do
-		if def.max_y <= min_y and def.min_y <= max_y then
+		if min_y <= def.max_y and def.min_y <= max_y then
 			local hpos_list = {}
 			for i in va:iterp(block_min, block_max) do
 				if spawnit.is_valid_position(def_index, def, data, va, i) then
