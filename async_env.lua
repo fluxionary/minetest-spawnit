@@ -8,6 +8,7 @@ local get_content_id = minetest.get_content_id
 
 local DefaultTable = futil.DefaultTable
 local Set = futil.Set
+local in_bounds = futil.math.in_bounds
 
 local is_full_nodebox = spawnit.util.is_full_nodebox
 local get_in_entity_indices = spawnit.util.get_in_entity_indices
@@ -137,6 +138,8 @@ local function get_can_be_near(def_index, def)
 		can_be_near = build_can_be(def.near)
 		can_be_near_by_def[def_index] = can_be_near
 	end
+
+	return can_be_near
 end
 
 local function check_is_near(def_index, def, data, va, i)
@@ -158,7 +161,7 @@ end
 
 function spawnit.is_valid_position(def_index, def, data, va, i)
 	local pos = va:position(i)
-	if not (def.min_y <= pos.y and pos.y <= def.max_y) then
+	if not in_bounds(def.min_y, pos.y, def.max_y) then
 		return false
 	end
 

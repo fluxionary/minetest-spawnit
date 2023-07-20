@@ -5,6 +5,7 @@ local math_max = math.max
 local math_min = math.min
 local math_pi = math.pi
 local math_random = math.random
+local math_sqrt = math.sqrt
 
 local choice = futil.random.choice
 local deg2rad = futil.math.deg2rad
@@ -290,7 +291,13 @@ end
 function spawnit.util.is_too_far(player_pos, block_hpos)
 	local blockpos = get_position_from_hash(block_hpos)
 	local center = get_block_center(blockpos)
-	return player_pos:distance(center) > s.too_far_ratio * max_object_distance
+	local dx = (blockpos.x - center.x) ^ 2
+	local dy = (blockpos.y - center.y) ^ 2
+	local dz = (blockpos.z - center.z) ^ 2
+	local too_far_horizontal_ratio = s.too_far_horizontal_ratio ^ 2
+	local too_far_vertical_ratio = s.too_far_vertical_ratio ^ 2
+	local weighted_distance = math_sqrt((dx + dz) / too_far_horizontal_ratio + dy / too_far_vertical_ratio)
+	return weighted_distance > max_object_distance
 end
 
 function spawnit.util.final_check(def, pos)

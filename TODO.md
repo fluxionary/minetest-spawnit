@@ -7,9 +7,7 @@ before release:
   * bats are spawning in the daytime...
   * hamsters are spawning in the ocean
 
-* break up "too far" calculations into separate xz and y factors
-
-* all the TOOOs in the files
+* the TOOOs in the files
 
 
 FUTURE:

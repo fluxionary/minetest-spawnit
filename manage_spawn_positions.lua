@@ -36,7 +36,7 @@ minetest.register_on_mapblocks_changed(function(modified_blocks, modified_block_
 	end
 end)
 
--- NOTICE: executed in the async environment, where the namespace is different!
+-- NOTICE: executed in the async environment, where the namespace is different! be careful w/ upvalues!!!
 local function async_call(vm, block_min, block_max)
 	local va = VoxelArea(vm:get_emerged_area())
 	local data = vm:get_data()
@@ -45,7 +45,7 @@ local function async_call(vm, block_min, block_max)
 
 	local hpos_set_by_def = {}
 	for def_index, def in ipairs(spawnit.registered_spawns) do
-		if min_y <= def.max_y and def.min_y <= max_y then
+		if futil.math.do_intervals_overlap(def.min_y, def.max_y, min_y, max_y) then
 			local hpos_list = {}
 			for i in va:iterp(block_min, block_max) do
 				if spawnit.is_valid_position(def_index, def, data, va, i) then
