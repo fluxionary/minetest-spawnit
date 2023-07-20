@@ -14,7 +14,7 @@ spawnit.block_hposs_by_def = futil.DefaultTable(function()
 	return futil.Set()
 end)
 
-function spawnit.clear_spawns(hpos)
+function spawnit.clear_spawn_poss(hpos)
 	local spawn_poss = spawnit.spawn_poss_by_block_hpos[hpos]
 	if spawn_poss then
 		spawnit.spawn_poss_by_block_hpos[hpos] = nil
@@ -32,7 +32,7 @@ end
 
 minetest.register_on_mapblocks_changed(function(modified_blocks, modified_block_count)
 	for hpos in pairs(modified_blocks) do
-		spawnit.clear_spawns(hpos)
+		spawnit.clear_spawn_poss(hpos)
 	end
 end)
 
