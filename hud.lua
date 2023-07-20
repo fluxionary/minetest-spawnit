@@ -8,6 +8,11 @@ spawnit.hud = futil.define_hud("spawnit:hud", {
 	enabled_by_default = false,
 	get_hud_data = spawnit.get_and_reset_stats,
 	get_hud_def = function(player, stats)
+		if not minetest.check_player_privs(player, s.hud_priv) then
+			spawnit.hud:set_enabled(player, false)
+			return {}
+		end
+
 		local lines
 		if s.track_memory_usage then
 			lines = { f("approx memory usage = %.1fMiB", stats.approx_memory_usage / (1024 * 1024)) }

@@ -15,6 +15,5 @@
 * need to be able to somehow say "spawn on leaves, but only if they're solid"
   * and/or/not/parentheses
 * show exponential moving averages of some HUD stat values
-* if your priv gets revoked, you can't disable the HUD...
 * break up "too far" calculations into separate xz and y factors
 * add way to toggle/filter spawns during runtime?
