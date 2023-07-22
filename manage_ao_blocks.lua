@@ -103,7 +103,7 @@ local function get_ao_block_hpos_set(player)
 	local fov = get_fov(player)
 	-- TODO: this naively looks at every mapblock inside a cube and checks whether it's inside the solid angle,
 	--       possibly we could calculate the maximum extents of the solid angle, and only check within those?
-	r = active_object_send_range_blocks
+	r = active_object_send_range_blocks - 1 -- TODO: for some reason w/out -1, this spawns things too farm?
 	for x = x0 - r, x0 + r do
 		for y = y0 - r, y0 + r do
 			for z = z0 - r, z0 + r do

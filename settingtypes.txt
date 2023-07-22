@@ -12,3 +12,6 @@ spawnit:track_memory_usage () bool false
 spawnit:max_queue_size () int 300
 spawnit:max_add_to_queue_per_ao_period () int 100
 spawnit:max_spawn_rules_per_iteration () int 40
+spawnit:default_chance () float 300 1
+spawnit:default_max_in_area_radius () float 24
+spawnit:default_spawn_in_protected () bool true

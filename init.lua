@@ -16,8 +16,9 @@ spawnit.dofile("mob_counter")
 spawnit.dofile("register")
 spawnit.dofile("spawn_mobs")
 
-spawnit.dofile("hud")
+spawnit.dofile("compat", "init")
 
 spawnit.async_dofile("async_env")
 
 spawnit.dofile("debugging")
+spawnit.dofile("hud")

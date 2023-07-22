@@ -15,6 +15,7 @@ local get_blockpos = futil.vector.get_blockpos
 local sample = futil.random.sample
 
 local get_node_light = minetest.get_node_light
+local get_natural_light = minetest.get_natural_light
 local get_objects_inside_radius = minetest.get_objects_inside_radius
 local get_position_from_hash = minetest.get_position_from_hash
 local get_timeofday = minetest.get_timeofday
@@ -190,23 +191,35 @@ local function check_pos_for_cluster(def, pos)
 	local light = get_node_light(pos)
 	if not light then
 		-- indicates location isn't loaded
-		return false
+		return false, true
 	end
 
-	-- TODO: use futil.math.in_bounds
-	if def.min_light > light or light > def.max_light then
-		return false
+	if not futil.math.in_bounds(def.min_node_light, light, def.max_node_light) then
+		return false, false -- light might change
 	end
 
-	-- TODO: should we also check artificial and natural light? probably
+	if not futil.math.in_bounds(def.min_natural_light, get_natural_light(pos), def.max_natural_light) then
+		return false, false -- light might change
+	end
 
 	-- protection could have changed, so check again
 	if (not def.spawn_in_protected) and minetest.is_protected(pos, def.entity_name) then
-		return false
+		return false, true
 	end
 
-	if def.check_pos and not def.check_pos(pos) then
-		return false
+	if def.check_pos then
+		local success, should_remove = def.check_pos(pos)
+		if not success then
+			return false, should_remove
+		end
+	end
+
+	local registered_pos_checks = spawnit.registered_pos_checks
+	for i = 1, #registered_pos_checks do
+		local success, should_remove = registered_pos_checks[i](pos, def)
+		if not success then
+			return false, should_remove
+		end
 	end
 
 	return true
@@ -234,10 +247,12 @@ function spawnit.util.pick_a_cluster(def_index, def)
 			local filtered = {}
 			for hpos in hpos_set:iterate() do
 				local pos = get_position_from_hash(hpos)
-				if check_pos_for_cluster(def, pos) then
+				local success, should_remove = check_pos_for_cluster(def, pos)
+				if success then
 					filtered[#filtered + 1] = pos
+				elseif should_remove then
+					hpos_set:remove(hpos)
 				end
-				-- TODO: should we remove the position if it's not fit? i guess light levels can change...
 			end
 			if #filtered >= def.cluster then
 				poss = filtered
@@ -300,23 +315,38 @@ function spawnit.util.is_too_far(player_pos, block_hpos)
 	return weighted_distance > max_object_distance
 end
 
-function spawnit.util.final_check(def, pos)
-	-- TODO: rename this
-	if def.max_in_area and def.max_in_area > 0 then
+local function too_many_in_area(def, pos)
+	local max_in_area = def.max_in_area
+	local max_any_in_area = def.max_any_in_area
+	if max_in_area > 0 or max_any_in_area > 0 then
+		local relevant_mobs = spawnit.relevant_mobs
 		local radius = def.max_in_area_radius
 		local count = 0
+		local any_count = 0
 		local objs = get_objects_inside_radius(pos, radius)
 		for i = 1, #objs do
-			local e = objs[i]:get_luaentity()
-			if e and e.name == def.entity_name then
-				count = count + 1
-				if count >= def.max_in_area then
-					return false
+			local name = (objs[i]:get_luaentity() or {}).name
+			if name then
+				if max_in_area > 0 and name == def.entity_name then
+					count = count + 1
+					if count >= max_in_area then
+						return true
+					end
+				end
+				if max_any_in_area > 0 and relevant_mobs:contains(name) then
+					any_count = any_count + 1
+					if any_count >= max_any_in_area then
+						return true
+					end
 				end
 			end
 		end
 	end
 
+	return false
+end
+
+local function wrong_distance_to_players(def, pos)
 	if def.min_player_distance and def.max_player_distance then
 		local objs = get_objects_inside_radius(pos, def.max_player_distance)
 		local found_any = false
@@ -332,13 +362,13 @@ function spawnit.util.final_check(def, pos)
 			end
 		end
 		if not found_any then
-			return false
+			return true
 		end
 	elseif def.min_player_distance then
 		local objs = get_objects_inside_radius(pos, def.min_player_distance)
 		for i = 1, #objs do
 			if minetest.is_player(objs[i]) then
-				return false
+				return true
 			end
 		end
 	elseif def.max_player_distance then
@@ -351,8 +381,20 @@ function spawnit.util.final_check(def, pos)
 			end
 		end
 		if not found_any then
-			return false
+			return true
 		end
+	end
+
+	return false
+end
+
+function spawnit.util.check_pos_against_def(def, pos)
+	if too_many_in_area(def, pos) then
+		return false, false
+	end
+
+	if wrong_distance_to_players(def, pos) then
+		return false, false
 	end
 
 	return true

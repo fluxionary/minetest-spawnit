@@ -6,7 +6,7 @@ local s = spawnit.settings
 
 local should_spawn = spawnit.util.should_spawn
 local pick_a_cluster = spawnit.util.pick_a_cluster
-local final_check = spawnit.util.final_check
+local check_pos_against_def = spawnit.util.check_pos_against_def
 local remove_spawn_position = spawnit.util.remove_spawn_position
 
 local function try_spawn_mob(def_index, def)
@@ -16,7 +16,8 @@ local function try_spawn_mob(def_index, def)
 	end
 
 	for _, pos in ipairs(cluster) do
-		if final_check(def, pos) then
+		local success, should_remove = check_pos_against_def(def, pos)
+		if success then
 			local entity_name
 			if type(def.entity_name) == "string" then
 				entity_name = def.entity_name
@@ -40,6 +41,8 @@ local function try_spawn_mob(def_index, def)
 				spawnit.log("warning", "failed to spawn %s @ %s", entity_name, spos)
 			end
 			spawnit.stats.num_spawned = spawnit.stats.num_spawned + 1
+			remove_spawn_position(def_index, pos)
+		elseif should_remove then
 			remove_spawn_position(def_index, pos)
 		end
 	end

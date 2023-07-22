@@ -653,6 +653,7 @@ stds.spawnit = {
 		minetest = {fields = {
 			"registered_entities",
 		}},
+		areas = {fields = {"areas",}},
 	},
 	read_globals = {
 		"fmod",

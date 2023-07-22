@@ -1,5 +1,7 @@
 local f = string.format
 
+local s = spawnit.settings
+
 local spawns_near_something = spawnit.util.spawns_near_something
 local spawns_on_something = spawnit.util.spawns_on_something
 
@@ -42,21 +44,24 @@ end
 
 local default_values = {
 	cluster = 1,
-	chance = 300,
+	chance = s.default_chance,
 	per_player = true,
 	on = { "node" },
 	within = { "breathable" },
 	near = { "any" },
+	spawn_in_protected = s.default_spawn_in_protected,
 	min_y = MIN_Y,
 	max_y = MAX_Y,
-	min_light = 0,
-	max_light = 15,
-	min_time_of_day = 0,
-	max_time_of_day = 1,
-	spawn_in_protected = true,
 	max_active = -1,
 	max_in_area = -1,
-	max_in_area_radius = 16,
+	max_any_in_area = -1,
+	max_in_area_radius = s.default_max_in_area_radius,
+	min_node_light = 0,
+	max_node_light = 15,
+	min_time_of_day = 0,
+	max_time_of_day = 1,
+	min_natural_light = 0,
+	max_natural_light = 15,
 }
 
 local function set_default_values(t)
@@ -74,19 +79,21 @@ local valid_keys = futil.Set({
 	"on",
 	"within",
 	"near",
+	"spawn_in_protected",
 	"min_y",
 	"max_y",
-	"min_light",
-	"max_light",
-	"min_time_of_day",
-	"max_time_of_day",
-	"spawn_in_protected",
-	"min_player_distance",
-	"max_player_distance",
 	"max_active",
 	"max_in_area",
 	"max_any_in_area",
 	"max_in_area_radius",
+	"min_node_light",
+	"max_node_light",
+	"min_time_of_day",
+	"max_time_of_day",
+	"min_natural_light",
+	"max_natural_light",
+	"min_player_distance",
+	"max_player_distance",
 	"collisionbox",
 
 	"should_spawn",
@@ -130,17 +137,14 @@ local function validate_nodes(nodes)
 	end
 end
 
-function spawnit.register(def, do_validate_nodes)
+local function validate_def(def, do_validate_nodes)
 	validate_keys(def)
-	def = table.copy(def)
-	set_default_values(def)
 	local entity_name = def.entity_name
 	if not entity_name then
 		error("attempt to register spawning w/out specifying entity")
 	end
-	local entity_def
 	if type(entity_name) == "string" then
-		entity_def = minetest.registered_entities[entity_name]
+		local entity_def = minetest.registered_entities[entity_name]
 		if not entity_def then
 			error(f("attempt to register spawning for unknown entity %s", entity_name))
 		end
@@ -150,13 +154,11 @@ function spawnit.register(def, do_validate_nodes)
 			if not kind_def then
 				error(f("attempt to register spawning for unknown entity %s", kind))
 			end
-			entity_def = entity_def or kind_def -- use the first one to calculate the collisionbox
 		end
-		def.chooser = futil.random.WeightedChooser(entity_name)
-	end
-	if not entity_def then
+	else
 		error(f("invalid entity specification %s", dump(entity_name)))
 	end
+
 	assert(def.cluster >= 1)
 	assert(def.chance > 0)
 	if do_validate_nodes then
@@ -166,14 +168,42 @@ function spawnit.register(def, do_validate_nodes)
 	end
 	assert(def.min_y <= def.max_y, f("max_y (%i) < min_y (%i); mob cannot spawn", def.max_y, def.min_y))
 	assert(
-		def.min_light <= def.max_light,
-		f("min_light (%i) < max_light (%i); mob cannot spawn", def.min_light, def.max_light)
+		def.min_node_light <= def.max_node_light,
+		f("min_node_light (%i) < max_node_light (%i); mob cannot spawn", def.min_node_light, def.max_node_light)
+	)
+	assert(
+		def.min_natural_light <= def.max_natural_light,
+		f(
+			"min_natural_light (%i) < max_natural_light (%i); mob cannot spawn",
+			def.min_natural_light,
+			def.max_natural_light
+		)
 	)
 	assert(def.min_time_of_day ~= def.max_time_of_day)
 	assert(
 		not def.min_player_distance or not def.max_player_distance or def.min_player_distance <= def.max_player_distance
 	)
 	assert(def.max_active ~= 0)
+end
+
+function spawnit.register(def, do_validate_nodes)
+	def = table.copy(def)
+	set_default_values(def)
+	validate_def(def, do_validate_nodes)
+	local entity_name = def.entity_name
+	local entity_def
+	if type(entity_name) == "string" then
+		spawnit.relevant_mobs:add(entity_name)
+		entity_def = minetest.registered_entities[entity_name]
+	elseif type(entity_name) == "table" then
+		-- it's a map of names to chances
+		for kind in pairs(entity_name) do
+			entity_def = entity_def or minetest.registered_entities[kind]
+			spawnit.relevant_mobs:add(kind)
+		end
+
+		def.chooser = futil.random.WeightedChooser(entity_name)
+	end
 
 	def.collisionbox = (
 		def.collisionbox
@@ -181,12 +211,11 @@ function spawnit.register(def, do_validate_nodes)
 		or entity_def.collisionbox
 		or { -0.5, -0.5, -0.5, 0.5, 0.5, 0.5 }
 	)
+	update_mob_extents(def)
 	table.insert(spawnit.registered_spawns, def)
 	if def.max_active > 0 then
 		spawnit.count_active_mobs(entity_name)
 	end
-
-	update_mob_extents(def)
 end
 
 function spawnit.clear_spawns(entity_name)
@@ -209,3 +238,9 @@ minetest.register_on_mods_loaded(function()
 		error("cannot clear spawns after mods are loaded.")
 	end
 end)
+
+spawnit.registered_pos_checks = {}
+
+function spawnit.register_pos_check(callback)
+	table.insert(spawnit.registered_pos_checks, callback)
+end
