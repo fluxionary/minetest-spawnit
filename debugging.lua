@@ -262,11 +262,14 @@ minetest.register_chatcommand("show_all_in_block", {
 		local block_hpos = minetest.hash_node_position(block_pos)
 		local spawn_poss = spawnit.spawn_poss_by_block_hpos[block_hpos]
 		if not spawn_poss then
-			return false, "no spawn_poss"
+			return false, "nothing currently spawning at that location"
+		end
+		if type(spawn_poss) == "string" then
+			return false, spawn_poss -- might be calculating
 		end
 		local hpos_set = spawn_poss:get_hpos_set(def_index)
 		if not hpos_set then
-			return false, "no hpos_set"
+			return false, "the mob cannot spawn in that location"
 		end
 
 		for hpos in hpos_set:iterate() do
