@@ -2,7 +2,7 @@ spawnit:update_ao_period () float 5
 spawnit:spawn_mobs_period () float 12
 spawnit:too_far_horizontal_ratio () float 2
 spawnit:too_far_vertical_ratio () float 1.25
-spawnit:hud_priv () string server
+spawnit:debug_priv () string server
 spawnit:hud_update_period () float 5
 spawnit:spawn_chance_multiplier () float 1
 spawnit:queue_us_per_s () float 3000

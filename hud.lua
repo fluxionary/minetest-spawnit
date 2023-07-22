@@ -49,8 +49,8 @@ spawnit.hud = futil.define_hud("spawnit:hud", {
 	end,
 })
 
-if not minetest.registered_privileges[s.hud_priv] then
-	minetest.register_privilege(s.hud_priv, {
+if not minetest.registered_privileges[s.debug_priv] then
+	minetest.register_privilege(s.debug_priv, {
 		description = S("spawnit hud priv"),
 		give_to_singleplayer = true,
 		give_to_admin = true,
@@ -59,7 +59,7 @@ end
 
 minetest.register_chatcommand("toggle_spawnit_hud", {
 	description = S("toggle spawnit hud"),
-	privs = { [s.hud_priv] = true },
+	privs = { [s.debug_priv] = true },
 	func = function(name)
 		local player = minetest.get_player_by_name(name)
 		if not player then

@@ -658,5 +658,7 @@ stds.spawnit = {
 		"fmod",
 		"futil",
 		"action_queues",
+		"areas",
+		"worldedit",
 	},
 }

@@ -19,3 +19,5 @@ spawnit.dofile("spawn_mobs")
 spawnit.dofile("hud")
 
 spawnit.async_dofile("async_env")
+
+spawnit.dofile("debugging")
