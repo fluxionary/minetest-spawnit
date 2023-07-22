@@ -3,9 +3,8 @@ before release:
   * prefix all "internal" but published function names with `_`
   * add settingtypes descriptions
 
-* functionality testing
-  * bats are spawning in the daytime...
-  * hamsters are spawning in the ocean
+* features
+  * ability to specify that animals shouldn't spawn in a specific area
 
 * the TOOOs in the files
 
