@@ -3,9 +3,6 @@ before release:
   * prefix all "internal" but published function names with `_`
   * add settingtypes descriptions
 
-* features
-  * ability to specify that animals shouldn't spawn in a specific area
-
 * the TOOOs in the files
 
 
