@@ -38,7 +38,7 @@ for name, def in pairs(minetest.registered_nodes) do
 		end
 	else
 		not_walkable_cids:add(cid)
-		if (def.drowing or 0) == 0 and (def.damage_per_second or 0) == 0 then -- TODO: also #13644
+		if (def.drowning or 0) == 0 and (def.damage_per_second or 0) == 0 then -- TODO: also #13644
 			breathable_cids:add(cid)
 			if (def.drawtype or "normal") == "airlike" then -- TODO: also #13644
 				breathable_airlike_cids:add(cid)
