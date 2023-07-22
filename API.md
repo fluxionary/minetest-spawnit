@@ -1,3 +1,5 @@
+WARNING: many internal functions are exposed, but you should not rely on anything that isn't documented here.
+
 ```lua
 -- https://gitea.your-land.de/your-land/bugtracker/issues/4592
 
