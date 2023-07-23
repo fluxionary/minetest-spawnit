@@ -28,25 +28,27 @@ end)
 
 -- build cid sets
 for name, def in pairs(minetest.registered_nodes) do
-	local cid = get_content_id(name)
-	if def.walkable ~= false then -- TODO https://github.com/minetest/minetest/issues/13644
-		walkable_cids:add(cid)
-		if def.drawtype == "nodebox" and def.node_box and is_full_nodebox(def.node_box) then
-			node_cids:add(cid)
-		elseif (not def.collision_box) or is_full_nodebox(def.collision_box) then
-			node_cids:add(cid)
-		end
-	else
-		not_walkable_cids:add(cid)
-		if (def.drowning or 0) == 0 and (def.damage_per_second or 0) == 0 then -- TODO: also #13644
-			breathable_cids:add(cid)
-			if (def.drawtype or "normal") == "airlike" then -- TODO: also #13644
-				breathable_airlike_cids:add(cid)
+	if name ~= "ignore" then
+		local cid = get_content_id(name)
+		if def.walkable ~= false then -- TODO https://github.com/minetest/minetest/issues/13644
+			walkable_cids:add(cid)
+			if def.drawtype == "nodebox" and def.node_box and is_full_nodebox(def.node_box) then
+				node_cids:add(cid)
+			elseif (not def.collision_box) or is_full_nodebox(def.collision_box) then
+				node_cids:add(cid)
+			end
+		else
+			not_walkable_cids:add(cid)
+			if (def.drowning or 0) == 0 and (def.damage_per_second or 0) == 0 then -- TODO: also #13644
+				breathable_cids:add(cid)
+				if (def.drawtype or "normal") == "airlike" then -- TODO: also #13644
+					breathable_airlike_cids:add(cid)
+				end
 			end
 		end
-	end
-	for group in pairs(def.groups or {}) do
-		cids_by_group[group]:add(cid)
+		for group in pairs(def.groups or {}) do
+			cids_by_group[group]:add(cid)
+		end
 	end
 end
 
