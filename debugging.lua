@@ -25,25 +25,27 @@ end)
 minetest.register_on_mods_loaded(function()
 	-- build cid sets
 	for name, def in pairs(minetest.registered_nodes) do
-		local cid = get_content_id(name)
-		if def.walkable ~= false then
-			walkable_cids:add(cid)
-			if def.drawtype == "nodebox" and def.node_box and is_full_nodebox(def.node_box) then
-				node_cids:add(cid)
-			elseif (not def.collision_box) or is_full_nodebox(def.collision_box) then
-				node_cids:add(cid)
-			end
-		else
-			not_walkable_cids:add(cid)
-			if (def.drowning or 0) == 0 and (def.damage_per_second or 0) == 0 then
-				breathable_cids:add(cid)
-				if (def.drawtype or "normal") == "airlike" then
-					breathable_airlike_cids:add(cid)
+		if name ~= "ignore" then
+			local cid = get_content_id(name)
+			if def.walkable ~= false then
+				walkable_cids:add(cid)
+				if def.drawtype == "nodebox" and def.node_box and is_full_nodebox(def.node_box) then
+					node_cids:add(cid)
+				elseif (not def.collision_box) or is_full_nodebox(def.collision_box) then
+					node_cids:add(cid)
+				end
+			else
+				not_walkable_cids:add(cid)
+				if (def.drowning or 0) == 0 and (def.damage_per_second or 0) == 0 then
+					breathable_cids:add(cid)
+					if (def.drawtype or "normal") == "airlike" then
+						breathable_airlike_cids:add(cid)
+					end
 				end
 			end
-		end
-		for group in pairs(def.groups or {}) do
-			cids_by_group[group]:add(cid)
+			for group in pairs(def.groups or {}) do
+				cids_by_group[group]:add(cid)
+			end
 		end
 	end
 end)
@@ -294,3 +296,69 @@ minetest.register_chatcommand("show_all_in_block", {
 		return true, "marked"
 	end,
 })
+
+local mobs_registered_for_lifetimer = Set()
+
+function spawnit.register_mob_lifetimer(entity_name)
+	if mobs_registered_for_lifetimer:contains(entity_name) then
+		return
+	end
+	mobs_registered_for_lifetimer:add(entity_name)
+	local def = minetest.registered_entities[entity_name]
+	local old_on_activate = def.on_activate
+	function def.on_activate(self, staticdata, dtime_s)
+		self._spawnit_lifetimer = minetest.get_us_time()
+		if old_on_activate then
+			return old_on_activate(self, staticdata, dtime_s)
+		end
+	end
+
+	local old_on_deactivate = def.on_deactivate
+	function def.on_deactivate(self, removal)
+		local elapsed = minetest.get_us_time() - self._spawnit_lifetimer
+		local pos = self.object:get_pos():round()
+		local spos = minetest.pos_to_string(pos)
+		if removal then
+			spawnit.log("action", "%s @ %s was removed after %.3fs", entity_name, spos, elapsed / 1e6)
+		else
+			spawnit.log(
+				"action",
+				"%s @ %s was deactivated after %.3fs (%s)",
+				entity_name,
+				spos,
+				elapsed / 1e6,
+				spawnit.is_active_object_block(pos)
+			)
+		end
+		if old_on_deactivate then
+			return old_on_activate(self, removal)
+		end
+	end
+end
+
+function spawnit.get_look_angle_offset(player, pos)
+	local player_pos = player:get_pos()
+	local look_dir = player:get_look_dir()
+	local properties = player:get_properties()
+	local eye_height = properties.eye_height
+	local eye_pos = player_pos:offset(0, eye_height, 0)
+	local to_pos = eye_pos - pos
+	local theta = math.acos(look_dir:dot(to_pos) / (look_dir:length() * to_pos:length()))
+	return futil.math.rad2deg(theta)
+end
+
+local MAP_BLOCKSIZE = minetest.MAP_BLOCKSIZE
+local BLOCK_MAX_RADIUS = math.sqrt(3) / 2 * MAP_BLOCKSIZE
+function spawnit.get_look_angle_offset_block(player, pos)
+	local blockpos = futil.vector.get_blockpos(pos)
+	local center = futil.vector.get_block_center(blockpos)
+	local player_pos = player:get_pos()
+	local look_dir = player:get_look_dir()
+	local properties = player:get_properties()
+	local eye_height = properties.eye_height
+	local eye_pos = player_pos:offset(0, eye_height, 0)
+	local adjdist = BLOCK_MAX_RADIUS / math.cos((math.pi - futil.math.deg2rad(72)) / 2)
+	local blockpos_adj = center - (eye_pos - look_dir * adjdist)
+	local theta = math.acos(vector.dot(look_dir, blockpos_adj) / (look_dir:length() * blockpos_adj:length()))
+	return futil.math.rad2deg(theta)
+end

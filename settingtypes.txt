@@ -1,5 +1,5 @@
-spawnit:update_ao_period () float 5
-spawnit:spawn_mobs_period () float 12
+spawnit:update_ao_period () float 3
+spawnit:spawn_mobs_period () float 3
 spawnit:too_far_horizontal_ratio () float 2
 spawnit:too_far_vertical_ratio () float 1.25
 spawnit:debug_priv () string server
@@ -7,11 +7,12 @@ spawnit:hud_update_period () float 5
 spawnit:spawn_chance_multiplier () float 1
 spawnit:queue_us_per_s () float 3000
 spawnit:player_move_too_fast_ratio () float 1.5
-spawnit:max_positions_per_mapblock_per_rule () float 128
+spawnit:max_positions_per_mapblock_per_rule () float 32
 spawnit:track_memory_usage () bool false
+spawnit:track_mob_lifetime () bool false
 spawnit:max_queue_size () int 300
-spawnit:max_add_to_queue_per_ao_period () int 100
 spawnit:max_spawn_rules_per_iteration () int 40
+spawnit:max_spawn_events_per_iteration () int 5
 spawnit:default_chance () float 300 1
 spawnit:default_max_in_area_radius () float 24
 spawnit:default_spawn_in_protected () bool true

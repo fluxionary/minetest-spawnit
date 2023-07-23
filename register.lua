@@ -214,7 +214,22 @@ function spawnit.register(def, do_validate_nodes)
 	update_mob_extents(def)
 	table.insert(spawnit.registered_spawns, def)
 	if def.max_active > 0 then
-		spawnit.count_active_mobs(entity_name)
+		if type(entity_name) == "table" then
+			for name in pairs(entity_name) do
+				spawnit.count_active_mobs(name)
+			end
+		else
+			spawnit.count_active_mobs(entity_name)
+		end
+	end
+	if s.track_mob_lifetime then
+		if type(entity_name) == "table" then
+			for name in pairs(entity_name) do
+				spawnit.register_mob_lifetimer(name)
+			end
+		else
+			spawnit.register_mob_lifetimer(entity_name)
+		end
 	end
 end
 
