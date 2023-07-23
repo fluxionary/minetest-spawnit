@@ -15,6 +15,7 @@ local function try_spawn_mob(def_index, def)
 		return
 	end
 
+	local any_success = false
 	for _, pos in ipairs(cluster) do
 		local success, should_remove = check_pos_against_def(def, pos)
 		if success then
@@ -37,6 +38,7 @@ local function try_spawn_mob(def_index, def)
 				if def.after_spawn then
 					def.after_spawn(pos, obj)
 				end
+				any_success = true
 			else
 				spawnit.log("warning", "failed to spawn %s @ %s", entity_name, spos)
 			end
@@ -46,6 +48,8 @@ local function try_spawn_mob(def_index, def)
 			remove_spawn_position(def_index, pos)
 		end
 	end
+
+	return any_success
 end
 
 futil.register_globalstep({
@@ -58,11 +62,17 @@ futil.register_globalstep({
 		local registered_spawns = spawnit.registered_spawns
 		local num_spawn_rules = #registered_spawns
 		local max_spawn_rules_per_iteration = s.max_spawn_rules_per_iteration
+		local successful_spawns = 0
 		if num_spawn_rules <= max_spawn_rules_per_iteration then
 			for def_index = 1, num_spawn_rules do
 				local def = registered_spawns[def_index]
 				if should_spawn(def, period, num_players) then
-					try_spawn_mob(def_index, def)
+					if try_spawn_mob(def_index, def) then
+						successful_spawns = successful_spawns + 1
+						if successful_spawns >= s.max_spawn_events_per_iteration then
+							return
+						end
+					end
 				end
 			end
 		else
@@ -71,7 +81,12 @@ futil.register_globalstep({
 			for i = 1, max_spawn_rules_per_iteration do
 				local def_index, def = unpack(sample[i])
 				if should_spawn(def, adjusted_period, num_players) then
-					try_spawn_mob(def_index, def)
+					if try_spawn_mob(def_index, def) then
+						successful_spawns = successful_spawns + 1
+						if successful_spawns >= s.max_spawn_events_per_iteration then
+							return
+						end
+					end
 				end
 			end
 		end
