@@ -660,6 +660,7 @@ stds.spawnit = {
 		"futil",
 		"action_queues",
 		"areas",
+		"mesecons_debug",
 		"worldedit",
 	},
 }

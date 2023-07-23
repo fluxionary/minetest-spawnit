@@ -15,12 +15,20 @@ spawnit.hud = futil.define_hud("spawnit:hud", {
 
 		local lines
 		if s.track_memory_usage then
-			lines = { f("approx memory usage = %.1fMiB", stats.approx_memory_usage / (1024 * 1024)) }
+			lines = {
+				f("minetest lua memory usage = %.1fMiB", stats.all_mt_lua_memory_usage / 1024),
+				f("approx spawnit memory usage = %.1fMiB", stats.approx_memory_usage / (1024 * 1024)),
+			}
 		else
 			lines = {}
 		end
 
+		if stats.avg_lag then
+			table.insert(lines, f("actual server lag (a ratio) = %.1f", stats.avg_lag))
+		end
+
 		table.insert_all(lines, {
+			f("server max_lag = %.2f", stats.max_lag),
 			f("#registered_spawns = %i", stats.registered_spawns),
 			f("#active_object_blocks = %i", stats.active_object_blocks),
 			f("#nearby_blocks = %i", stats.nearby_blocks),
@@ -32,7 +40,9 @@ spawnit.hud = futil.define_hud("spawnit:hud", {
 			f("async_queue_usage = %.1fus/s", stats.async_queue_usage),
 			f("async_callback_usage = %.1fus/s", stats.async_callback_usage),
 			f("spawn_mobs_usage = %.1fus/s", stats.spawn_mobs_usage),
-			f("num_spawned = %i", stats.num_spawned),
+			f("#spawned = %i", stats.num_spawned),
+			f("total #spawned = %i", stats.total_spawned),
+			f("active_entities = %i", stats.active_entities),
 			f("hud data gen time = %ius", stats.stats_gen_time),
 		})
 		local text = table.concat(lines, "\n")

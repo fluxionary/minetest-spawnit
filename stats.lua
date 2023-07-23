@@ -9,6 +9,7 @@ spawnit.stats = {
 	spawn_mobs_duration = 0,
 
 	num_spawned = 0,
+	total_spawned = 0,
 }
 
 function spawnit.get_and_reset_stats()
@@ -17,6 +18,7 @@ function spawnit.get_and_reset_stats()
 	stats.registered_spawns = #spawnit.registered_spawns
 	stats.active_object_blocks = futil.table.size(spawnit.visibility_by_block_hpos)
 	stats.nearby_blocks = futil.table.size(spawnit.nearby_players_by_block_hpos)
+	stats.active_entities = futil.table.size(minetest.luaentities)
 
 	local calculating_blocks = 0
 	local cached_blocks = 0
@@ -30,6 +32,8 @@ function spawnit.get_and_reset_stats()
 	stats.calculating_blocks = calculating_blocks
 	stats.cached_blocks = cached_blocks
 
+	stats.max_lag = minetest.get_server_max_lag()
+
 	local now = minetest.get_us_time()
 	local elapsed = (now - spawnit.stats.last_measure_time) / 1e6
 	stats.ao_calc_usage = spawnit.stats.ao_calc_duration / elapsed
@@ -41,12 +45,13 @@ function spawnit.get_and_reset_stats()
 	stats.callback_queue_size = spawnit.callback_queue:size()
 
 	if s.track_memory_usage then
+		stats.all_mt_lua_memory_usage = collectgarbage("count")
 		stats.approx_memory_usage = futil.estimate_memory_usage(spawnit)
-	else
-		stats.approx_memory_usage = 0
 	end
 
 	stats.num_spawned = spawnit.stats.num_spawned
+	spawnit.stats.total_spawned = spawnit.stats.total_spawned + spawnit.stats.num_spawned
+	stats.total_spawned = spawnit.stats.total_spawned
 
 	spawnit.stats.last_measure_time = now
 	spawnit.stats.ao_calc_duration = 0
@@ -56,6 +61,10 @@ function spawnit.get_and_reset_stats()
 	spawnit.stats.num_spawned = 0
 
 	stats.stats_gen_time = minetest.get_us_time() - start
+
+	if minetest.get_modpath("mesecons_debug") then
+		stats.avg_lag = mesecons_debug.avg_lag
+	end
 
 	return stats
 end
