@@ -203,7 +203,8 @@ futil.register_globalstep({
 			local block_center2 = get_block_center(get_position_from_hash(block_hpos2))
 			return player_pos:distance(block_center1) < player_pos:distance(block_center2)
 		end)
-		for i = 1, math.min(#block_hposs_without_spawn_poss, s.max_add_to_queue_per_ao_period) do
+		local max_add_to_queue_per_ao_period = math.ceil(s.max_queue_size / math.max(1, #players - 1))
+		for i = 1, math.min(#block_hposs_without_spawn_poss, max_add_to_queue_per_ao_period) do
 			local block_hpos = block_hposs_without_spawn_poss[i]
 			local blockpos = get_position_from_hash(block_hpos)
 			local pos = get_block_min(blockpos)
@@ -247,7 +248,9 @@ futil.register_globalstep({
 		end
 
 		shuffle(need_to_find_spawn_poss)
-		for i = 1, math.min(#need_to_find_spawn_poss, s.max_add_to_queue_per_ao_period) do
+		local players = minetest.get_connected_players()
+		local max_add_to_queue_per_ao_period = math.ceil(s.max_queue_size / math.max(1, #players - 1))
+		for i = 1, math.min(#need_to_find_spawn_poss, max_add_to_queue_per_ao_period) do
 			local block_hpos = need_to_find_spawn_poss[i]
 			local blockpos = get_position_from_hash(block_hpos)
 			local pos = get_block_min(blockpos)
