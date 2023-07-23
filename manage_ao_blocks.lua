@@ -30,6 +30,13 @@ local active_object_send_range_blocks = tonumber(minetest.settings:get("active_o
 spawnit.visibility_by_block_hpos = futil.DefaultTable(function()
 	return Set()
 end)
+
+function spawnit.is_active_object_block(pos)
+	local blockpos = get_blockpos(pos)
+	local block_hpos = hash_node_position(blockpos)
+	return rawget(spawnit.visibility_by_block_hpos, block_hpos) ~= nil
+end
+
 -- for a given mapblock, who was it visible to "recently"? if a player moves too far away from a block,
 -- they are no longer nearby. if it is not near any players, it is removed from this map.
 spawnit.nearby_players_by_block_hpos = futil.DefaultTable(function()
