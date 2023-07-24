@@ -29,9 +29,7 @@ local active_block_range = tonumber(minetest.settings:get("active_block_range"))
 local active_object_send_range_blocks = tonumber(minetest.settings:get("active_object_send_range_blocks")) or 8
 local movement_walk_speed = tonumber(minetest.settings:get("movement_speed_walk")) or 4.0
 
-local max_object_distance = math.sqrt(3)
-	* MAP_BLOCKSIZE
-	* (math_max(active_block_range, active_object_send_range_blocks) + 1)
+local max_object_distance = MAP_BLOCKSIZE * (math_max(active_block_range, active_object_send_range_blocks) + 1)
 
 local s = spawnit.settings
 
