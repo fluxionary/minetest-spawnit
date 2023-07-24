@@ -64,6 +64,9 @@ futil.register_globalstep({
 		local max_spawn_rules_per_iteration = s.max_spawn_rules_per_iteration
 		local successful_spawns = 0
 		if num_spawn_rules <= max_spawn_rules_per_iteration then
+			registered_spawns = table.copy(registered_spawns)
+			table.shuffle(registered_spawns) -- because we may abort before doing all of these, shuffle them to prevent
+			-- rules registered early from dominating
 			for def_index = 1, num_spawn_rules do
 				local def = registered_spawns[def_index]
 				if should_spawn(def, period, num_players) then
@@ -77,6 +80,8 @@ futil.register_globalstep({
 			end
 		else
 			local sample = sample_with_indices(registered_spawns, max_spawn_rules_per_iteration)
+			table.shuffle(sample) -- sampling doesn't actually produce something w/ a random order.
+			-- if element 1 is in the sample, it's always at location 1.
 			local adjusted_period = period * num_spawn_rules / max_spawn_rules_per_iteration
 			for i = 1, max_spawn_rules_per_iteration do
 				local def_index, def = unpack(sample[i])
