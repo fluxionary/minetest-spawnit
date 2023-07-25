@@ -16,3 +16,4 @@ spawnit:max_spawn_events_per_iteration () int 5
 spawnit:default_chance () float 300 1
 spawnit:default_max_in_area_radius () float 24
 spawnit:default_spawn_in_protected () bool true
+spawnit:pick_cluster_trials () int 5 1

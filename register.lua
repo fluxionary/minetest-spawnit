@@ -52,9 +52,9 @@ local default_values = {
 	spawn_in_protected = s.default_spawn_in_protected,
 	min_y = MIN_Y,
 	max_y = MAX_Y,
-	max_active = -1,
-	max_in_area = -1,
-	max_any_in_area = -1,
+	max_active = -1, -- no limit
+	max_in_area = -1, -- no limit
+	max_any_in_area = -1, -- no limit
 	max_in_area_radius = s.default_max_in_area_radius,
 	min_node_light = 0,
 	max_node_light = 15,
@@ -62,6 +62,8 @@ local default_values = {
 	max_time_of_day = 1,
 	min_natural_light = 0,
 	max_natural_light = 15,
+	min_player_distance = -1, -- no limit
+	max_player_distance = -1, -- no limit
 }
 
 local function set_default_values(t)
@@ -137,6 +139,7 @@ local function validate_nodes(nodes)
 	end
 end
 
+-- do_validate_nodes: if true, do a check to ensure the within/on/near lists only use existing nodes
 local function validate_def(def, do_validate_nodes)
 	validate_keys(def)
 	local entity_name = def.entity_name
@@ -180,9 +183,9 @@ local function validate_def(def, do_validate_nodes)
 		)
 	)
 	assert(def.min_time_of_day ~= def.max_time_of_day)
-	assert(
-		not def.min_player_distance or not def.max_player_distance or def.min_player_distance <= def.max_player_distance
-	)
+	if def.min_player_distance >= 0 and def.max_player_distance >= 0 then
+		assert(def.min_player_distance <= def.max_player_distance)
+	end
 	assert(def.max_active ~= 0)
 end
 

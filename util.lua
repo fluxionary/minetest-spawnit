@@ -7,19 +7,20 @@ local math_pi = math.pi
 local math_random = math.random
 local math_sqrt = math.sqrt
 
-local choice = futil.random.choice
+local shuffle = table.shuffle
+
+local random_choice = futil.random.choice
 local deg2rad = futil.math.deg2rad
 local equals = futil.equals
 local get_block_center = futil.vector.get_block_center
 local get_blockpos = futil.vector.get_blockpos
-local sample = futil.random.sample
+local random_sample = futil.random.sample
 
 local get_node_light = minetest.get_node_light
 local get_natural_light = minetest.get_natural_light
 local get_objects_inside_radius = minetest.get_objects_inside_radius
 local get_position_from_hash = minetest.get_position_from_hash
 local get_timeofday = minetest.get_timeofday
-local get_us_time = minetest.get_us_time
 local hash_node_position = minetest.hash_node_position
 
 local MAP_BLOCKSIZE = minetest.MAP_BLOCKSIZE
@@ -62,14 +63,38 @@ function spawnit.util.is_full_nodebox(nodebox)
 		or (nodebox.type == "fixed" and equals(nodebox.fixed, { -0.5, -0.5, -0.5, 0.5, 0.5, 0.5 }))
 end
 
+local function min_x_offset(cb)
+	return math_min(0, math_floor(cb[1] + 0.5))
+end
+
+local function min_y_offset(cb)
+	return math_min(0, math_floor(cb[2] + 0.5))
+end
+
+local function min_z_offset(cb)
+	return math_min(0, math_floor(cb[3] + 0.5))
+end
+
+local function max_x_offset(cb)
+	return math_max(0, math_ceil(cb[4] - 0.5))
+end
+
+local function max_y_offset(cb)
+	return math_max(0, math_ceil(cb[5] - 0.5))
+end
+
+local function max_z_offset(cb)
+	return math_max(0, math_ceil(cb[6] - 0.5))
+end
+
 function spawnit.util.get_in_entity_indices(def, va, i)
 	local cb = def.collisionbox
 	local pos0 = va:position(i)
 	local x0, y0, z0 = pos0.x, pos0.y, pos0.z
 	local indices = {}
-	for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do
-		for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
-			for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
+	for y = y0 + min_y_offset(cb), y0 + max_y_offset(cb) do
+		for x = x0 + min_x_offset(cb), x0 + max_x_offset(cb) do
+			for z = z0 + min_z_offset(cb), z0 + max_z_offset(cb) do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
@@ -82,66 +107,68 @@ function spawnit.util.get_under_entity_indices(def, va, i)
 	local pos0 = va:position(i)
 	local x0, y0, z0 = pos0.x, pos0.y, pos0.z
 	local indices = {}
-	local y = y0 + math_floor(cb[2] + 0.5) - 1
-	for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
-		for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
+	local y = y0 + min_y_offset(cb) - 1
+	for x = x0 + min_x_offset(cb), x0 + max_x_offset(cb) do
+		for z = z0 + min_z_offset(cb), z0 + max_z_offset(cb) do
 			indices[#indices + 1] = va:index(x, y, z)
 		end
 	end
 	return indices
 end
 
--- get nodes touching the entity on 6 faces. doesn't (usually?) include edges and corners of the bounding box
--- TODO this is confusing, is there a way we can make the calculations easier to understand?
+-- get positions inside or touching the entity on 6 faces. doesn't include edges and corners of the bounding box
 function spawnit.util.get_near_entity_indices(def, va, i)
 	local cb = def.collisionbox
 	local pos0 = va:position(i)
 	local x0, y0, z0 = pos0.x, pos0.y, pos0.z
-	local indices = spawnit.util.get_in_entity_indices(def, va, i)
+	local min_x, max_x = x0 + min_x_offset(cb), x0 + max_x_offset(cb)
+	local min_y, max_y = y0 + min_y_offset(cb), y0 + max_y_offset(cb)
+	local min_z, max_z = z0 + min_z_offset(cb), z0 + max_z_offset(cb)
+	local indices = spawnit.util.get_in_entity_indices(def, va, i) -- consider things inside to be near too!
 	do -- left x face
-		local x = x0 + math_floor(cb[1] + 0.5) - 1
-		for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do
-			for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
+		local x = min_x - 1
+		for y = min_y, max_y do
+			for z = min_z, max_z do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
 	end
 	do -- right x face
-		local x = x0 + math_ceil(cb[4] - 0.5) + 1
-		for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do
-			for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
+		local x = max_x + 1
+		for y = min_y, max_y do
+			for z = min_z, max_z do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
 	end
 	do -- bottom y face
-		local y = y0 + math_floor(cb[2] + 0.5) - 1
-		for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
-			for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
+		local y = min_y - 1
+		for x = min_x, max_x do
+			for z = min_z, max_z do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
 	end
 	do -- top y face
-		local y = y0 + math_ceil(cb[5] - 0.5) + 1
-		for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
-			for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
+		local y = max_y + 1
+		for x = min_x, max_x do
+			for z = min_z, max_z do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
 	end
 	do -- low z face
-		local z = z0 + math_floor(cb[3] + 0.5) - 1
-		for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
-			for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do
+		local z = min_z - 1
+		for x = min_x, max_x do
+			for y = min_y, max_y do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
 	end
 	do -- high z face
-		local z = z0 + math_ceil(cb[6] - 0.5) + 1
-		for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
-			for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do
+		local z = max_z + 1
+		for x = min_x, max_x do
+			for y = min_y, max_y do
 				indices[#indices + 1] = va:index(x, y, z)
 			end
 		end
@@ -162,7 +189,7 @@ function spawnit.util.should_spawn(def, period, num_players)
 		end
 	end
 
-	if def.max_active and def.max_active > 0 and spawnit.get_active_count(def.entity_name) >= def.max_active then
+	if def.max_active > 0 and spawnit.get_active_count(def.entity_name) >= def.max_active then
 		return false
 	end
 
@@ -185,6 +212,7 @@ function spawnit.util.should_spawn(def, period, num_players)
 end
 
 -- do some specific checks about whether to add a position to a cluster
+-- rvs: first is whether the position is valid currently, second is whether to remove it from the pool of positions
 local function check_pos_for_cluster(def, pos)
 	local light = get_node_light(pos)
 	if not light then
@@ -220,11 +248,11 @@ local function check_pos_for_cluster(def, pos)
 		end
 	end
 
-	return true
+	return true, true
 end
 
 -- for a given spawn definition, pick a cluster of positions to spawn some mobs, if possible
--- the cluster will all reside within the same mapblock
+-- the points in the cluster will all be from the same mapblock
 function spawnit.util.pick_a_cluster(def_index, def)
 	local block_hposs_set = spawnit.block_hposs_by_def[def_index]
 	if not block_hposs_set or block_hposs_set:size() == 0 then
@@ -236,9 +264,14 @@ function spawnit.util.pick_a_cluster(def_index, def)
 		block_hposs_list[#block_hposs_list + 1] = block_hpos
 	end
 	local poss = {}
-	for _ = 1, 5 do
-		-- TODO: we ought to keep from checking the same block twice here (futil.random.sample?)
-		local block_hpos = block_hposs_list[math_random(#block_hposs_list)]
+	if #block_hposs_list > s.pick_cluster_trials then
+		block_hposs_list = random_sample(block_hposs_list, s.pick_cluster_trials)
+	end
+
+	shuffle(block_hposs_list)
+
+	for i = 1, #block_hposs_list do
+		local block_hpos = block_hposs_list[i]
 		local spawn_poss = spawnit.spawn_poss_by_block_hpos[block_hpos]
 		if spawn_poss then
 			local hpos_set = spawn_poss:get_hpos_set(def_index)
@@ -253,9 +286,11 @@ function spawnit.util.pick_a_cluster(def_index, def)
 				end
 			end
 			if #filtered >= def.cluster then
+				-- we've found a good cluster
 				poss = filtered
 				break
 			elseif #filtered > #poss then
+				-- better than anything we've found previously
 				poss = filtered
 			end
 		end
@@ -263,9 +298,9 @@ function spawnit.util.pick_a_cluster(def_index, def)
 	if #poss <= def.cluster then
 		return poss
 	elseif def.cluster == 1 then
-		return { choice(poss) }
+		return { random_choice(poss) }
 	else
-		return sample(poss, def.cluster)
+		return random_sample(poss, def.cluster)
 	end
 end
 
@@ -313,6 +348,7 @@ function spawnit.util.is_too_far(player_pos, block_hpos)
 	return weighted_distance > max_object_distance
 end
 
+-- are there already too many of the same kind or of any kind according to the definition?
 local function too_many_in_area(def, pos)
 	local max_in_area = def.max_in_area
 	local max_any_in_area = def.max_any_in_area
@@ -344,8 +380,9 @@ local function too_many_in_area(def, pos)
 	return false
 end
 
+-- if the definition sets a min or max distance from player, make sure the pos respects those bounds
 local function wrong_distance_to_players(def, pos)
-	if def.min_player_distance and def.max_player_distance then
+	if def.min_player_distance >= 0 and def.max_player_distance >= 0 then
 		local objs = get_objects_inside_radius(pos, def.max_player_distance)
 		local found_any = false
 		for i = 1, #objs do
@@ -362,14 +399,14 @@ local function wrong_distance_to_players(def, pos)
 		if not found_any then
 			return true
 		end
-	elseif def.min_player_distance then
+	elseif def.min_player_distance >= 0 then
 		local objs = get_objects_inside_radius(pos, def.min_player_distance)
 		for i = 1, #objs do
 			if minetest.is_player(objs[i]) then
 				return true
 			end
 		end
-	elseif def.max_player_distance then
+	elseif def.max_player_distance >= 0 then
 		local objs = get_objects_inside_radius(pos, def.max_player_distance)
 		local found_any = false
 		for i = 1, #objs do
@@ -408,13 +445,14 @@ function spawnit.util.remove_spawn_position(def_index, pos)
 	end
 end
 
+-- used by the async callback. the async env can't check for protection, so we have to do it in the main thread.
 function spawnit.util.cull_protected_positions(hpos_set_by_def)
 	local is_protected = minetest.is_protected
 	for def_index, hpos_set in pairs(hpos_set_by_def) do
-		local def = spawnit.registered_spawns[def_index]
-		local entity = def.entity_name
-		local any_left = false
-		if not def.spawn_in_protected then
+		local spawn_def = spawnit.registered_spawns[def_index]
+		if not spawn_def.spawn_in_protected then
+			local entity = spawn_def.entity_name
+			local any_left = false
 			for hpos in hpos_set:iterate() do
 				if is_protected(get_position_from_hash(hpos), entity) then
 					hpos_set:remove(hpos)
@@ -422,51 +460,31 @@ function spawnit.util.cull_protected_positions(hpos_set_by_def)
 					any_left = true
 				end
 			end
-		end
-		if not any_left then
-			hpos_set_by_def[def_index] = nil
+			if not any_left then
+				hpos_set_by_def[def_index] = nil
+			end
 		end
 	end
 end
 
--- used to track a player's movement speed in case they're in a minecart or something
-local previous_pos_and_time_by_player_name = {}
-
-if INIT == "game" then
-	minetest.register_on_joinplayer(function(player)
-		local player_name = player:get_player_name()
-		previous_pos_and_time_by_player_name[player_name] = { player:get_pos(), get_us_time() }
-	end)
-
-	minetest.register_on_leaveplayer(function(player)
-		local player_name = player:get_player_name()
-		previous_pos_and_time_by_player_name[player_name] = nil
-	end)
-end
-
-function spawnit.util.is_moving_too_fast(player)
+function spawnit.util.is_moving_too_fast(obj)
 	local max_speed = s.player_move_too_fast_ratio * movement_walk_speed
-	if player:get_velocity():length() >= max_speed then
+	local attached = obj:get_attach()
+	while attached do
+		obj = attached
+		attached = obj:get_attach()
+	end
+
+	if obj:get_velocity():length() >= max_speed then
 		return true
 	end
-	local player_name = player:get_player_name()
-	local previous_pos_and_time = previous_pos_and_time_by_player_name[player_name]
-	local pos = player:get_pos()
-	local now = get_us_time()
-	if not previous_pos_and_time then
-		previous_pos_and_time_by_player_name[player_name] = { pos, now }
-		return false
-	end
-	local previous_pos, previous_time = unpack(previous_pos_and_time)
-	local too_fast = pos:distance(previous_pos) / (now - previous_time) >= max_speed
-	previous_pos_and_time_by_player_name[player_name] = { pos, now }
-	return too_fast
 end
 
--- used to check whether a player's active blocks need to be updated
-local previous_pos_and_look_by_player_name = {}
-
 if INIT == "game" then
+	-- util is also loaded by the async env, but player info and e.g. register_on_joinplayer is not available there
+
+	local previous_pos_and_look_by_player_name = {}
+
 	minetest.register_on_joinplayer(function(player)
 		local player_name = player:get_player_name()
 		previous_pos_and_look_by_player_name[player_name] = { player:get_pos(), player:get_look_dir() }
@@ -476,17 +494,18 @@ if INIT == "game" then
 		local player_name = player:get_player_name()
 		previous_pos_and_look_by_player_name[player_name] = nil
 	end)
-end
 
-function spawnit.util.has_changed_pos_or_look(player)
-	local player_name = player:get_player_name()
-	local pos = player:get_pos()
-	local look = player:get_look_dir()
-	local previous_pos, previous_look = unpack(previous_pos_and_look_by_player_name[player_name])
-	previous_pos_and_look_by_player_name[player_name] = { pos, look }
-	if active_object_send_range_blocks <= active_block_range then
-		return not pos:equals(previous_pos)
-	else
-		return not (pos:equals(previous_pos) and look:equals(previous_look))
+	-- used to check whether a player's active blocks need to be updated
+	function spawnit.util.has_changed_pos_or_look(player)
+		local player_name = player:get_player_name()
+		local pos = player:get_pos()
+		local look = player:get_look_dir()
+		local previous_pos, previous_look = unpack(previous_pos_and_look_by_player_name[player_name])
+		previous_pos_and_look_by_player_name[player_name] = { pos, look }
+		if active_object_send_range_blocks <= active_block_range then
+			return not pos:equals(previous_pos)
+		else
+			return not (pos:equals(previous_pos) and look:equals(previous_look))
+		end
 	end
 end
