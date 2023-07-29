@@ -9,11 +9,12 @@ local math_sqrt = math.sqrt
 
 local shuffle = table.shuffle
 
-local random_choice = futil.random.choice
 local deg2rad = futil.math.deg2rad
 local equals = futil.equals
 local get_block_center = futil.vector.get_block_center
 local get_blockpos = futil.vector.get_blockpos
+local in_bounds = futil.math.in_bounds
+local random_choice = futil.random.choice
 local random_sample = futil.random.sample
 
 local get_node_light = minetest.get_node_light
@@ -176,17 +177,37 @@ function spawnit.util.get_near_entity_indices(def, va, i)
 	return indices
 end
 
+local function is_valid_player(player, def)
+	local pos = player:get_pos():round()
+
+	return in_bounds(def.min_y, pos.y, def.max_y)
+end
+
 -- probabilistic; should return true approximately once per `def.chance` seconds, if other conditions are met
-function spawnit.util.should_spawn(def, period, num_players)
-	local r = math_random()
+function spawnit.util.should_spawn(def, period, players)
+	local num_players = 0
 	if def.per_player then
-		if r >= (period * num_players) / (def.chance * s.spawn_chance_multiplier) then
-			return false
+		for i = 1, #players do
+			if is_valid_player(players[i], def) then
+				num_players = num_players + 1
+			end
 		end
 	else
-		if r >= period / (def.chance * s.spawn_chance_multiplier) then
-			return false
+		for i = 1, #players do
+			if is_valid_player(players[i], def) then
+				num_players = 1
+				break
+			end
 		end
+	end
+
+	if num_players == 0 then
+		return false
+	end
+
+	local r = math_random()
+	if r >= (period * num_players) / (def.chance * s.spawn_chance_multiplier) then
+		return false
 	end
 
 	if def.max_active > 0 and spawnit.get_active_count(def.entity_name) >= def.max_active then
@@ -220,11 +241,11 @@ local function check_pos_for_cluster(def, pos)
 		return false, true
 	end
 
-	if not futil.math.in_bounds(def.min_node_light, light, def.max_node_light) then
+	if not in_bounds(def.min_node_light, light, def.max_node_light) then
 		return false, false -- light might change
 	end
 
-	if not futil.math.in_bounds(def.min_natural_light, get_natural_light(pos), def.max_natural_light) then
+	if not in_bounds(def.min_natural_light, get_natural_light(pos), def.max_natural_light) then
 		return false, false -- light might change
 	end
 

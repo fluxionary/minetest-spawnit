@@ -58,7 +58,7 @@ futil.register_globalstep({
 	catchup = "single",
 	func = function(period)
 		local start = get_us_time()
-		local num_players = #minetest.get_connected_players()
+		local players = #minetest.get_connected_players()
 		local registered_spawns = spawnit.registered_spawns
 		local num_spawn_rules = #registered_spawns
 		local max_spawn_rules_per_iteration = s.max_spawn_rules_per_iteration
@@ -69,7 +69,7 @@ futil.register_globalstep({
 			-- rules registered early from dominating
 			for def_index = 1, num_spawn_rules do
 				local def = registered_spawns[def_index]
-				if should_spawn(def, period, num_players) then
+				if should_spawn(def, period, players) then
 					if try_spawn_mob(def_index, def) then
 						successful_spawns = successful_spawns + 1
 						if successful_spawns >= s.max_spawn_events_per_iteration then
@@ -85,7 +85,7 @@ futil.register_globalstep({
 			local adjusted_period = period * num_spawn_rules / max_spawn_rules_per_iteration
 			for i = 1, max_spawn_rules_per_iteration do
 				local def_index, def = unpack(sample[i])
-				if should_spawn(def, adjusted_period, num_players) then
+				if should_spawn(def, adjusted_period, players) then
 					if try_spawn_mob(def_index, def) then
 						successful_spawns = successful_spawns + 1
 						if successful_spawns >= s.max_spawn_events_per_iteration then
