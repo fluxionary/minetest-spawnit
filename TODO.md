@@ -11,7 +11,7 @@ create an AFK detector API mod
 * currently, too many players moving around at once will likely starve updates for some of them because of the way
   the cue is limited. instead of a fixed limit on the number of items a single player can add to the queue, we need
   to scale that limit to the number of present players
-  * the first way i did this doesn't account for players which are *AFK* and not generating anything new
+  * the first way i did this doesn't account for players who are *AFK* and not generating anything new
 
 * the TOOOs in the files
 

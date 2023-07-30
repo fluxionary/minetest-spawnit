@@ -58,7 +58,7 @@ futil.register_globalstep({
 	catchup = "single",
 	func = function(period)
 		local start = get_us_time()
-		local players = #minetest.get_connected_players()
+		local players = minetest.get_connected_players()
 		local registered_spawns = spawnit.registered_spawns
 		local num_spawn_rules = #registered_spawns
 		local max_spawn_rules_per_iteration = s.max_spawn_rules_per_iteration
