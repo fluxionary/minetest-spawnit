@@ -1,7 +1,7 @@
 local S = spawnit.S
 
 minetest.register_chatcommand("area_spawnit", {
-	description = S("toggle mob spawning in an area (allowed mobs only)"),
+	description = S("toggle mob spawning in an area (i.e. disallow all spawns in area)"),
 	params = S("<area ID>"),
 	func = function(name, param)
 		local id = tonumber(param)
@@ -17,7 +17,7 @@ minetest.register_chatcommand("area_spawnit", {
 		areas:save()
 		return true,
 			spawnit_disabled and S("all spawns are disabled in the area") or S(
-				"spawns are now enabled for allowed mobs"
+				"spawns which ignore protection are now enabled"
 			)
 	end,
 })
