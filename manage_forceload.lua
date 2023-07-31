@@ -64,6 +64,6 @@ function minetest.forceload_free_block(pos, transient)
 	return old_forceload_free_block(pos, transient)
 end
 
-function spawnit.get_forceloaded()
+function spawnit._get_forceloaded()
 	return futil.Set(forceloaded)
 end

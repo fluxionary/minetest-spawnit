@@ -86,7 +86,7 @@ local function get_collision_box(entity_def)
 	return (entity_def.initial_properties or {}).collisionbox or entity_def.collisionbox
 end
 
-function spawnit.in_entity_poss(cb, pos)
+function spawnit._in_entity_poss(cb, pos)
 	local x0, y0, z0 = pos.x, pos.y, pos.z
 	local poss = {}
 	for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do
@@ -142,7 +142,7 @@ end
 local function check_can_be_in(entity_name, pos)
 	local can_be_in = get_can_be_in(entity_name)
 	local cb = get_collision_box(minetest.registered_entities[entity_name])
-	local in_entity_poss = spawnit.in_entity_poss(cb, pos)
+	local in_entity_poss = spawnit._in_entity_poss(cb, pos)
 	for j = 1, #in_entity_poss do
 		local pos2 = in_entity_poss[j]
 		local cid = minetest.get_content_id(minetest.get_node(pos2).name)
@@ -176,7 +176,7 @@ minetest.register_chatcommand("show_in_entity_poss", {
 			return false, "no collision box"
 		end
 
-		local poss = spawnit.in_entity_poss(cb, pos)
+		local poss = spawnit._in_entity_poss(cb, pos)
 
 		for i = 1, #poss do
 			local pos2 = poss[i]
@@ -214,7 +214,7 @@ minetest.register_chatcommand("check_can_be_in", {
 			return false, "no collision box"
 		end
 
-		local poss = spawnit.in_entity_poss(cb, pos)
+		local poss = spawnit._in_entity_poss(cb, pos)
 
 		for i = 1, #poss do
 			local pos2 = poss[i]
@@ -262,7 +262,7 @@ minetest.register_chatcommand("show_all_in_block", {
 		end
 		local block_pos = futil.vector.get_blockpos(pos)
 		local block_hpos = minetest.hash_node_position(block_pos)
-		local spawn_poss = spawnit.spawn_poss_by_block_hpos[block_hpos]
+		local spawn_poss = spawnit._spawn_poss_by_block_hpos[block_hpos]
 		if not spawn_poss then
 			return false, "nothing currently spawning at that location"
 		end
@@ -299,7 +299,7 @@ minetest.register_chatcommand("show_all_in_block", {
 
 local mobs_registered_for_lifetimer = Set()
 
-function spawnit.register_mob_lifetimer(entity_name)
+function spawnit._register_mob_lifetimer(entity_name)
 	if mobs_registered_for_lifetimer:contains(entity_name) then
 		return
 	end
@@ -336,7 +336,7 @@ function spawnit.register_mob_lifetimer(entity_name)
 	end
 end
 
-function spawnit.get_look_angle_offset(player, pos)
+function spawnit._get_look_angle_offset(player, pos)
 	local player_pos = player:get_pos()
 	local look_dir = player:get_look_dir()
 	local properties = player:get_properties()
@@ -349,7 +349,7 @@ end
 
 local MAP_BLOCKSIZE = minetest.MAP_BLOCKSIZE
 local BLOCK_MAX_RADIUS = math.sqrt(3) / 2 * MAP_BLOCKSIZE
-function spawnit.get_look_angle_offset_block(player, pos)
+function spawnit._get_look_angle_offset_block(player, pos)
 	local blockpos = futil.vector.get_blockpos(pos)
 	local center = futil.vector.get_block_center(blockpos)
 	local player_pos = player:get_pos()

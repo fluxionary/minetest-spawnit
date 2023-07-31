@@ -42,7 +42,7 @@ local function try_spawn_mob(def_index, def)
 			else
 				spawnit.log("warning", "failed to spawn %s @ %s", entity_name, spos)
 			end
-			spawnit.stats.num_spawned = spawnit.stats.num_spawned + 1
+			spawnit._stats.num_spawned = spawnit._stats.num_spawned + 1
 			remove_spawn_position(def_index, pos)
 		elseif should_remove then
 			remove_spawn_position(def_index, pos)
@@ -95,6 +95,6 @@ futil.register_globalstep({
 				end
 			end
 		end
-		spawnit.stats.spawn_mobs_duration = spawnit.stats.spawn_mobs_duration + (get_us_time() - start)
+		spawnit._stats.spawn_mobs_duration = spawnit._stats.spawn_mobs_duration + (get_us_time() - start)
 	end,
 })

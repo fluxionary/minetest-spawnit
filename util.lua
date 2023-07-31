@@ -210,7 +210,7 @@ function spawnit.util.should_spawn(def, period, players)
 		return false
 	end
 
-	if def.max_active > 0 and spawnit.get_active_count(def.entity_name) >= def.max_active then
+	if def.max_active > 0 and spawnit._get_active_count(def.entity_name) >= def.max_active then
 		return false
 	end
 
@@ -275,7 +275,7 @@ end
 -- for a given spawn definition, pick a cluster of positions to spawn some mobs, if possible
 -- the points in the cluster will all be from the same mapblock
 function spawnit.util.pick_a_cluster(def_index, def)
-	local block_hposs_set = spawnit.block_hposs_by_def[def_index]
+	local block_hposs_set = spawnit._block_hposs_by_def[def_index]
 	if not block_hposs_set or block_hposs_set:size() == 0 then
 		-- nowhere to spawn
 		return {}
@@ -293,7 +293,7 @@ function spawnit.util.pick_a_cluster(def_index, def)
 
 	for i = 1, #block_hposs_list do
 		local block_hpos = block_hposs_list[i]
-		local spawn_poss = spawnit.spawn_poss_by_block_hpos[block_hpos]
+		local spawn_poss = spawnit._spawn_poss_by_block_hpos[block_hpos]
 		if spawn_poss then
 			local hpos_set = spawn_poss:get_hpos_set(def_index)
 			local filtered = {}
@@ -374,7 +374,7 @@ local function too_many_in_area(def, pos)
 	local max_in_area = def.max_in_area
 	local max_any_in_area = def.max_any_in_area
 	if max_in_area > 0 or max_any_in_area > 0 then
-		local relevant_mobs = spawnit.relevant_mobs
+		local relevant_mobs = spawnit._relevant_mobs
 		local radius = def.max_in_area_radius
 		local count = 0
 		local any_count = 0
@@ -460,9 +460,9 @@ function spawnit.util.remove_spawn_position(def_index, pos)
 	local hpos = hash_node_position(pos)
 	local blockpos = get_blockpos(pos)
 	local block_hpos = hash_node_position(blockpos)
-	local spawn_poss = spawnit.spawn_poss_by_block_hpos[block_hpos]
+	local spawn_poss = spawnit._spawn_poss_by_block_hpos[block_hpos]
 	if spawn_poss and spawn_poss:remove_hpos(def_index, hpos) then
-		spawnit.block_hposs_by_def[def_index]:remove(block_hpos)
+		spawnit._block_hposs_by_def[def_index]:remove(block_hpos)
 	end
 end
 

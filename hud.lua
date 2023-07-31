@@ -3,13 +3,13 @@ local f = string.format
 local s = spawnit.settings
 local S = spawnit.S
 
-spawnit.hud = futil.define_hud("spawnit:hud", {
+spawnit._hud = futil.define_hud("spawnit:hud", {
 	period = s.hud_update_period,
 	enabled_by_default = false,
-	get_hud_data = spawnit.get_and_reset_stats,
+	get_hud_data = spawnit._get_and_reset_stats,
 	get_hud_def = function(player, stats)
 		if not minetest.check_player_privs(player, s.hud_priv) then
-			spawnit.hud:set_enabled(player, false)
+			spawnit._hud:set_enabled(player, false)
 			return {}
 		end
 
@@ -61,13 +61,13 @@ spawnit.hud = futil.define_hud("spawnit:hud", {
 
 if not minetest.registered_privileges[s.debug_priv] then
 	minetest.register_privilege(s.debug_priv, {
-		description = S("spawnit hud priv"),
+		description = S("spawnit debug priv"),
 		give_to_singleplayer = true,
 		give_to_admin = true,
 	})
 end
 
-minetest.register_chatcommand("toggle_spawnit_hud", {
+minetest.register_chatcommand("spawnit_hud", {
 	description = S("toggle spawnit hud"),
 	privs = { [s.debug_priv] = true },
 	func = function(name)
@@ -75,7 +75,7 @@ minetest.register_chatcommand("toggle_spawnit_hud", {
 		if not player then
 			return false, "you are not a connected player"
 		end
-		local enabled = spawnit.hud:toggle_enabled(player)
+		local enabled = spawnit._hud:toggle_enabled(player)
 		if enabled then
 			return true, "hud enabled"
 		else

@@ -10,34 +10,34 @@ local MIN_Y = MINP.y
 local MAX_Y = MAXP.y
 
 -- extent of halo around a mapblock that we need to check to see whether mobs fit
-spawnit.mob_extents = { 0, 0, 0, 0, 0, 0 }
+spawnit._mob_extents = { 0, 0, 0, 0, 0, 0 }
 
 -- warning: do NOT modify the following after `on_mods_loaded`!!!
 spawnit.registered_spawns = {}
-spawnit.relevant_mobs = futil.Set()
+spawnit._relevant_mobs = futil.Set()
 
 local function update_mob_extents(def)
 	local collisionbox = def.collisionbox
 	if spawns_near_something(def) then
 		for i = 1, 3 do
-			spawnit.mob_extents[i] = math.max(spawnit.mob_extents[i], math.ceil(collisionbox[i] + 0.5) - 1)
+			spawnit._mob_extents[i] = math.max(spawnit._mob_extents[i], math.ceil(collisionbox[i] + 0.5) - 1)
 		end
 
 		for i = 4, 6 do
-			spawnit.mob_extents[i] = math.max(spawnit.mob_extents[i], math.ceil(collisionbox[i] - 0.5) + 1)
+			spawnit._mob_extents[i] = math.max(spawnit._mob_extents[i], math.ceil(collisionbox[i] - 0.5) + 1)
 		end
 	else
-		spawnit.mob_extents[1] = math.min(spawnit.mob_extents[1], math.floor(collisionbox[1] + 0.5))
+		spawnit._mob_extents[1] = math.min(spawnit._mob_extents[1], math.floor(collisionbox[1] + 0.5))
 		if spawns_on_something(def) then
 			-- make sure we can check the node under the mob
-			spawnit.mob_extents[2] = math.min(spawnit.mob_extents[2], math.floor(collisionbox[2] + 0.5) - 1)
+			spawnit._mob_extents[2] = math.min(spawnit._mob_extents[2], math.floor(collisionbox[2] + 0.5) - 1)
 		else
-			spawnit.mob_extents[2] = math.min(spawnit.mob_extents[2], math.floor(collisionbox[2] + 0.5))
+			spawnit._mob_extents[2] = math.min(spawnit._mob_extents[2], math.floor(collisionbox[2] + 0.5))
 		end
-		spawnit.mob_extents[3] = math.min(spawnit.mob_extents[3], math.floor(collisionbox[3] + 0.5))
+		spawnit._mob_extents[3] = math.min(spawnit._mob_extents[3], math.floor(collisionbox[3] + 0.5))
 
 		for i = 4, 6 do
-			spawnit.mob_extents[i] = math.max(spawnit.mob_extents[i], math.ceil(collisionbox[i] - 0.5))
+			spawnit._mob_extents[i] = math.max(spawnit._mob_extents[i], math.ceil(collisionbox[i] - 0.5))
 		end
 	end
 end
@@ -196,13 +196,13 @@ function spawnit.register(def, do_validate_nodes)
 	local entity_name = def.entity_name
 	local entity_def
 	if type(entity_name) == "string" then
-		spawnit.relevant_mobs:add(entity_name)
+		spawnit._relevant_mobs:add(entity_name)
 		entity_def = minetest.registered_entities[entity_name]
 	elseif type(entity_name) == "table" then
 		-- it's a map of names to chances
 		for kind in pairs(entity_name) do
 			entity_def = entity_def or minetest.registered_entities[kind]
-			spawnit.relevant_mobs:add(kind)
+			spawnit._relevant_mobs:add(kind)
 		end
 
 		def.chooser = futil.random.WeightedChooser(entity_name)
@@ -219,19 +219,19 @@ function spawnit.register(def, do_validate_nodes)
 	if def.max_active > 0 then
 		if type(entity_name) == "table" then
 			for name in pairs(entity_name) do
-				spawnit.count_active_mobs(name)
+				spawnit._count_active_mobs(name)
 			end
 		else
-			spawnit.count_active_mobs(entity_name)
+			spawnit._count_active_mobs(entity_name)
 		end
 	end
 	if s.track_mob_lifetime then
 		if type(entity_name) == "table" then
 			for name in pairs(entity_name) do
-				spawnit.register_mob_lifetimer(name)
+				spawnit._register_mob_lifetimer(name)
 			end
 		else
-			spawnit.register_mob_lifetimer(entity_name)
+			spawnit._register_mob_lifetimer(entity_name)
 		end
 	end
 end

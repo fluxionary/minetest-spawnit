@@ -161,7 +161,7 @@ local function check_is_near(def_index, def, data, va, i)
 	return near_any
 end
 
-function spawnit.is_valid_position(def_index, def, data, va, i)
+function spawnit._is_valid_position(def_index, def, data, va, i)
 	local pos = va:position(i)
 	if not in_bounds(def.min_y, pos.y, def.max_y) then
 		return false

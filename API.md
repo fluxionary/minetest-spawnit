@@ -73,3 +73,21 @@ remove all spawn rules for some mob. note that any changes to the spawn rules *M
 ```lua
 spawnit.clear_spawns("mymod:my_walking_mob")
 ```
+
+this is the list of spawn rules. note that any changes to the spawn rules *MUST* be done *BEFORE* `on_mods_loaded`!
+```lua
+spawnit.registered_spawns = {}
+```
+
+check whether a particular position is active for objects, according to spawnit's calculations
+```lua
+spawnit.is_active_object_block(pos)
+```
+
+register a callback which will be run before spawning a mob at a position.
+return `true` to allow spawning, `false, false` to indicate a temporary failure, and `false, true` to indicate a
+permanent failure (the position will be removed from the list of possible spawn positions).
+```lua
+spawnit.register_pos_check(function(pos, def)
+end)
+```

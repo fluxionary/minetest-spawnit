@@ -1,4 +1,4 @@
--- TODO: this whole class is kinda useless, possibly remove
+-- TODO: this class is kinda useless, possibly remove
 
 local SpawnPositions = futil.class1()
 
@@ -32,4 +32,4 @@ function SpawnPositions:remove_hpos(def_index, hpos)
 	return false
 end
 
-spawnit.SpawnPositions = SpawnPositions
+spawnit._SpawnPositions = SpawnPositions
