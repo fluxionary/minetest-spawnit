@@ -42,7 +42,7 @@ local function async_call(vm, block_min, block_max)
 	local data = vm:get_data()
 	local min_y = block_min.y
 	local max_y = block_max.y
-	local max_positions_per_mapblock_per_rule = spawnit.settings.max_positions_per_mapblock_per_ruley
+	local max_positions_per_mapblock_per_rule = spawnit.settings.max_positions_per_mapblock_per_rule
 	local do_intervals_overlap = futil.math.do_intervals_overlap
 	local is_valid_position = spawnit._is_valid_position
 	local hash_node_position = minetest.hash_node_position
