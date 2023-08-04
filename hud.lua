@@ -24,26 +24,26 @@ spawnit._hud = futil.define_hud("spawnit:hud", {
 		end
 
 		if stats.avg_lag then
-			table.insert(lines, f("actual server lag (a ratio) = %.1f", stats.avg_lag))
+			table.insert(lines, f("lag ratio (dtime / dedicated_server_step) = %.1f", stats.avg_lag))
 		end
 
 		table.insert_all(lines, {
-			f("server max_lag = %.2f", stats.max_lag),
-			f("#registered_spawns = %i", stats.registered_spawns),
-			f("#active_object_blocks = %i", stats.active_object_blocks),
-			f("#nearby_blocks = %i", stats.nearby_blocks),
-			f("#cached_block_spawns = %i", stats.cached_blocks),
-			f("#calculating_blocks = %i", stats.calculating_blocks),
-			f("#async_queue_size = %i", stats.async_queue_size),
-			f("#callback_queue_size = %i", stats.callback_queue_size),
-			f("ao_calc_usage = %.1fus/s", stats.ao_calc_usage),
-			f("async_queue_usage = %.1fus/s", stats.async_queue_usage),
-			f("async_callback_usage = %.1fus/s", stats.async_callback_usage),
-			f("spawn_mobs_usage = %.1fus/s", stats.spawn_mobs_usage),
-			f("#spawned = %i", stats.num_spawned),
-			f("total #spawned = %i", stats.total_spawned),
-			f("active_entities = %i", stats.active_entities),
-			f("hud data gen time = %ius", stats.stats_gen_time),
+			f("server max_lag = %.2fs", stats.max_lag),
+			f("#registered spawn rules = %i", stats.registered_spawns),
+			f("#active object mapblocks = %i", stats.active_object_blocks),
+			f("#mapblocks near players = %i", stats.nearby_blocks),
+			f("#mapblocks with cached positions = %i", stats.cached_blocks),
+			f("#mapblocks being processed = %i", stats.calculating_blocks),
+			f("#async_queue (size) = %i", stats.async_queue_size),
+			f("#callback_queue (size) = %i", stats.callback_queue_size),
+			f("active mapblock analysis usage = %.1fus/s", stats.ao_calc_usage),
+			f("async queue usage = %.1fus/s", stats.async_queue_usage),
+			f("async callback usage = %.1fus/s", stats.async_callback_usage),
+			f("spawn mobs usage = %.1fus/s", stats.spawn_mobs_usage),
+			f("#spawned this step = %i", stats.num_spawned),
+			f("#spawned since startup = %i", stats.total_spawned),
+			f("#active_entities = %i", stats.active_entities),
+			f("gen time for this HUD = %ius", stats.stats_gen_time),
 		})
 		local text = table.concat(lines, "\n")
 		return {
