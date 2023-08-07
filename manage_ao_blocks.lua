@@ -44,16 +44,8 @@ spawnit._nearby_players_by_block_hpos = futil.DefaultTable(function()
 end)
 -- for a given player, which blocks are near them?
 spawnit._nearby_block_hpos_set_by_player_name = {}
-local afk_by_player_name = {} -- who hasn't moved/looked around and has no further spawn positions to calculate
-local afk_count = 0 -- number of AFK players
 
-minetest.register_on_joinplayer(function(player)
-	local player_name = player:get_player_name()
-	spawnit._nearby_block_hpos_set_by_player_name[player_name] = Set()
-	afk_by_player_name[player_name] = false
-end)
-
-minetest.register_on_leaveplayer(function(player)
+local function discard_all_player_poss(player)
 	local player_name = player:get_player_name()
 	local nearby_block_hpos_set = spawnit._nearby_block_hpos_set_by_player_name[player_name]
 	for hpos in nearby_block_hpos_set:iterate() do
@@ -69,11 +61,17 @@ minetest.register_on_leaveplayer(function(player)
 			spawnit._clear_spawn_poss(hpos)
 		end
 	end
+end
+
+minetest.register_on_joinplayer(function(player)
+	local player_name = player:get_player_name()
+	spawnit._nearby_block_hpos_set_by_player_name[player_name] = Set()
+end)
+
+minetest.register_on_leaveplayer(function(player)
+	local player_name = player:get_player_name()
+	discard_all_player_poss(player)
 	spawnit._nearby_block_hpos_set_by_player_name[player_name] = nil
-	if afk_by_player_name[player_name] then
-		afk_count = afk_count - 1
-	end
-	afk_by_player_name[player_name] = nil
 end)
 
 -- see `doc/active object regions.md`
@@ -143,26 +141,19 @@ local function pick_a_player(players)
 	-- first, we pick a player to update
 	player_i = (player_i % #players) + 1
 	local player = players[player_i]
-	local player_name = player:get_player_name()
 	local j = 0
 	local trials = math.min(s.update_player_ao_trials, #players)
-	local has_moved = has_changed_pos_or_look(player)
 
-	if has_moved then
-		afk_by_player_name[player_name] = false
-		afk_count = afk_count - 1
+	if has_changed_pos_or_look(player) then
 		return player
 	end
 
-	while afk_by_player_name[player_name] and j < trials do
+	while j < trials do
 		j = j + 1
 		player_i = (player_i % #players) + 1
 		player = players[player_i]
-		player_name = player:get_player_name()
-		has_moved = has_changed_pos_or_look(player)
-		if has_moved then
-			afk_by_player_name[player_name] = false
-			afk_count = afk_count - 1
+
+		if has_changed_pos_or_look(player) then
 			return player
 		end
 	end
@@ -227,29 +218,22 @@ local function update_visibility(player)
 end
 
 local function update_spawn_positions(player, players, block_hposs_without_spawn_poss)
-	local player_name = player:get_player_name()
 	local player_pos = player:get_pos()
 
 	-- finally, queue up processing of spawn positions as necessary
-	if #block_hposs_without_spawn_poss == 0 then
-		-- if there's no spawns left to calculate, stop doing ao updates until the player moves
-		afk_by_player_name[player_name] = true
-		afk_count = afk_count + 1
-	else
-		-- first, sort the blocks by distance from the player
-		table.sort(block_hposs_without_spawn_poss, function(block_hpos1, block_hpos2)
-			local block_center1 = get_block_center(get_position_from_hash(block_hpos1))
-			local block_center2 = get_block_center(get_position_from_hash(block_hpos2))
-			return player_pos:distance(block_center1) < player_pos:distance(block_center2)
-		end)
-		local max_add_to_queue_per_ao_period = math.ceil(s.max_queue_size / math.max(1, #players - afk_count - 1))
-		for i = 1, math.min(#block_hposs_without_spawn_poss, max_add_to_queue_per_ao_period) do
-			local block_hpos = block_hposs_without_spawn_poss[i]
-			local blockpos = get_position_from_hash(block_hpos)
-			local pos = get_block_min(blockpos)
-			if compare_block_status(pos, "loaded") then
-				spawnit._find_spawn_poss(block_hpos)
-			end
+	-- first, sort the blocks by distance from the player
+	table.sort(block_hposs_without_spawn_poss, function(block_hpos1, block_hpos2)
+		local block_center1 = get_block_center(get_position_from_hash(block_hpos1))
+		local block_center2 = get_block_center(get_position_from_hash(block_hpos2))
+		return player_pos:distance(block_center1) < player_pos:distance(block_center2)
+	end)
+	local max_add_to_queue_per_ao_period = math.ceil(s.max_queue_size / math.max(1, #players - 1))
+	for i = 1, math.min(#block_hposs_without_spawn_poss, max_add_to_queue_per_ao_period) do
+		local block_hpos = block_hposs_without_spawn_poss[i]
+		local blockpos = get_position_from_hash(block_hpos)
+		local pos = get_block_min(blockpos)
+		if compare_block_status(pos, "loaded") then
+			spawnit._find_spawn_poss(block_hpos)
 		end
 	end
 end
@@ -260,13 +244,22 @@ futil.register_globalstep({
 	func = function()
 		local start = get_us_time()
 
-		local players = minetest.get_connected_players()
+		if s.disable_spawns_near_afk then
+			local afk_players = afk_api.get_afk_players(s.min_afk_time)
+			for i = 1, #afk_players do
+				discard_all_player_poss(afk_players[i])
+			end
+		end
+
+		local players = afk_api.get_non_afk_players(s.min_afk_time)
 		if #players == 0 then
+			spawnit._stats.ao_calc_duration = spawnit._stats.ao_calc_duration + (get_us_time() - start)
 			return
 		end
 
 		local player = pick_a_player(players)
 		if not player then
+			spawnit._stats.ao_calc_duration = spawnit._stats.ao_calc_duration + (get_us_time() - start)
 			return
 		end
 

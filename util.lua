@@ -489,7 +489,7 @@ function spawnit.util.cull_protected_positions(hpos_set_by_def)
 end
 
 function spawnit.util.is_moving_too_fast(obj)
-	local max_speed = s.player_move_too_fast_ratio * movement_walk_speed
+	local max_speed = s.player_moved_too_fast_ratio * movement_walk_speed
 	local attached = obj:get_attach()
 	while attached do
 		obj = attached

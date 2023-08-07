@@ -17,6 +17,12 @@ spawnit:too_far_horizontal_ratio (too far horizontal ratio) float 2
 # discarded, in the vertical (y) dimension
 spawnit:too_far_vertical_ratio (too far horizontal ratio) float 1.25
 
+# disable this if you wish to enable passive mob farms.
+spawnit:disable_spawns_near_afk (disable spawns near afk players) bool true
+
+# time after which a player will be considered AFK
+spawnit:min_afk_time (min afk time) float 60
+
 [async environment]
 # how many microseconds to spend processing queue items per second. actual usage will tend to be a bit over this value.
 spawnit:queue_us_per_s (queue us per s) float 3000
@@ -31,12 +37,6 @@ spawnit:spawn_mobs_period (spawn mobs period) float 3.1
 # multiply the spawn "chance" by this value. values greater than 1 will decrease the chance. values less than 1 will
 # increase the chance
 spawnit:spawn_chance_multiplier (global spawn chance multiplier) float 1 0
-
-# disable this if you wish to enable passive mob farms.
-spawnit:disable_spawns_near_afk (disable spawns near afk players) bool true
-
-# time after which a player will be considered AFK
-spawnit:min_afk_time (min afk time) float 600
 
 # maximum number of spawn rules to process per spawn step
 spawnit:max_spawn_rules_per_iteration (max spawn rules per iteration) int 40

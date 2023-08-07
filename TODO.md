@@ -1,7 +1,6 @@
 before release:
 * code quality:
   * remove spawn_positions class?
-  * add settingtypes descriptions
 
 * tuning
   * currently nothing known todo
