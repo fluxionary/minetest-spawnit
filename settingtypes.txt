@@ -1,20 +1,78 @@
-spawnit:update_ao_period () float 3
-spawnit:spawn_mobs_period () float 3
-spawnit:too_far_horizontal_ratio () float 2
-spawnit:too_far_vertical_ratio () float 1.25
-spawnit:debug_priv () string server
-spawnit:hud_update_period () float 5
-spawnit:spawn_chance_multiplier () float 1
-spawnit:queue_us_per_s () float 3000
-spawnit:player_move_too_fast_ratio () float 1.5
-spawnit:track_memory_usage () bool false
-spawnit:track_mob_lifetime () bool false
-spawnit:max_queue_size () int 300
-spawnit:max_spawn_rules_per_iteration () int 40
-spawnit:max_spawn_events_per_iteration () int 5
-spawnit:default_chance () float 300 1
-spawnit:default_max_in_area_radius () float 24
-spawnit:default_spawn_in_protected () bool true
-spawnit:default_positions_per_mapblock () int 8 1
-spawnit:pick_cluster_trials () int 5 1
-spawnit:update_player_ao_trials () int 10 1
+[active object region management]
+# time between active object area updates (in seconds)
+spawnit:update_ao_period (update ao period) float 3
+
+# maximum number of players to look at when determining whether active object areas need to be recalculated
+spawnit:update_player_ao_trials (update player ao trials) int 10 1
+
+# players moving faster than this ratio times the server's walking speed (default 4 nodes per second) will not trigger
+# new active object area calculations
+spawnit:player_moved_too_fast_ratio (player moved too fast ratio) float 1.5
+
+# ratio of max(active_block_range, active_object_send_range_blocks) at which data is considered "too far" and
+# discarded, in the horizontal (x & z) dimensions
+spawnit:too_far_horizontal_ratio (too far horizontal ratio) float 2
+
+# ratio of max(active_block_range, active_object_send_range_blocks) at which data is considered "too far" and
+# discarded, in the vertical (y) dimension
+spawnit:too_far_vertical_ratio (too far horizontal ratio) float 1.25
+
+[async environment]
+# how many microseconds to spend processing queue items per second. actual usage will tend to be a bit over this value.
+spawnit:queue_us_per_s (queue us per s) float 3000
+
+# maximum number of items waiting for processing in the async queue.
+spawnit:max_queue_size (max queue size) int 300
+
+[mob spawning]
+# time between checking whether to spawn mobs (in seconds)
+spawnit:spawn_mobs_period (spawn mobs period) float 3.1
+
+# multiply the spawn "chance" by this value. values greater than 1 will decrease the chance. values less than 1 will
+# increase the chance
+spawnit:spawn_chance_multiplier (global spawn chance multiplier) float 1 0
+
+# disable this if you wish to enable passive mob farms.
+spawnit:disable_spawns_near_afk (disable spawns near afk players) bool true
+
+# time after which a player will be considered AFK
+spawnit:min_afk_time (min afk time) float 600
+
+# maximum number of spawn rules to process per spawn step
+spawnit:max_spawn_rules_per_iteration (max spawn rules per iteration) int 40
+
+# maximum number of successful spawn events per spawn step. note that a spawn event may spawn more than 1 mob.
+spawnit:max_spawn_events_per_iteration (max spawn events per iteration) int 5
+
+# number of times we try to pick a cluster of positions for a specific spawn before giving up
+spawnit:pick_cluster_trials (pick cluster trials) int 5 1
+
+[default spawn rule values]
+# if a spawn rule doesn't specify a chance, the rule will be evaluated approximately once per this value, in seconds
+spawnit:default_chance (default spawn chance) float 300 1
+
+# default radius for checking whether other mobs are nearby
+spawnit:default_max_in_area_radius (default max in area radius) float 24
+
+# whether a spawn rule will be triggered in protected areas by default. note that this does *not* override rules which
+# explicitly state whether they apply to protected areas! note that if the areas mod is present, the `/area_spawnit`
+# command can be used to ban *all* spawns within a specific protection area, even if it is "open".
+spawnit:default_spawn_in_protected (default spawn in protected) bool true
+
+# default maximum number of positions chosen per rule per mapblock. set this higher if you want more mobs to spawn in
+# the same area without it being unloaded and recomputed.
+spawnit:default_positions_per_mapblock (default positions per mapblock) int 8 1
+
+[debug]
+# privilege needed for using debugging commands. if it doesn't already exist, it will be created.
+spawnit:debug_priv (debug priv) string server
+
+# how often to update the debug HUD
+spawnit:hud_update_period (HUD update period) float 5
+
+# track *approximate* memory usage of various spawnit data structures, for report in the debug hud. note that this
+# can be *very* expensive.
+spawnit:track_memory_usage (track memory usage) bool false
+
+# if true, log when mobs die or are unloaded, along w/ how long they have been active.
+spawnit:track_mob_lifetime (track mob lifetime) bool false
