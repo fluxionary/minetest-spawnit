@@ -46,6 +46,7 @@ local default_values = {
 	cluster = 1,
 	chance = s.default_chance,
 	per_player = true,
+	positions_per_mapblock = s.default_positions_per_mapblock,
 	on = { "node" },
 	within = { "breathable" },
 	near = { "any" },
@@ -78,6 +79,7 @@ local valid_keys = futil.Set({
 	"cluster",
 	"chance",
 	"per_player",
+	"positions_per_mapblock",
 	"on",
 	"within",
 	"near",
@@ -164,6 +166,7 @@ local function validate_def(def, do_validate_nodes)
 
 	assert(def.cluster >= 1)
 	assert(def.chance > 0)
+	assert(def.positions_per_mapblock ~= 0)
 	if do_validate_nodes then
 		validate_nodes(def.on)
 		validate_nodes(def.within)

@@ -7,7 +7,6 @@ spawnit:hud_update_period () float 5
 spawnit:spawn_chance_multiplier () float 1
 spawnit:queue_us_per_s () float 3000
 spawnit:player_move_too_fast_ratio () float 1.5
-spawnit:max_positions_per_mapblock_per_rule () float 32
 spawnit:track_memory_usage () bool false
 spawnit:track_mob_lifetime () bool false
 spawnit:max_queue_size () int 300
@@ -16,5 +15,6 @@ spawnit:max_spawn_events_per_iteration () int 5
 spawnit:default_chance () float 300 1
 spawnit:default_max_in_area_radius () float 24
 spawnit:default_spawn_in_protected () bool true
+spawnit:default_positions_per_mapblock () int 8 1
 spawnit:pick_cluster_trials () int 5 1
 spawnit:update_player_ao_trials () int 10 1
