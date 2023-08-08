@@ -45,7 +45,7 @@ end)
 -- for a given player, which blocks are near them?
 spawnit._nearby_block_hpos_set_by_player_name = {}
 
-local function discard_all_player_poss(player)
+local function discard_all_visible_blocks(player)
 	local player_name = player:get_player_name()
 	local nearby_block_hpos_set = spawnit._nearby_block_hpos_set_by_player_name[player_name]
 	for hpos in nearby_block_hpos_set:iterate() do
@@ -54,6 +54,14 @@ local function discard_all_player_poss(player)
 		if visibility:is_empty() then
 			spawnit._visibility_by_block_hpos[hpos] = nil
 		end
+	end
+end
+
+local function discard_all_player_poss(player)
+	discard_all_visible_blocks(player)
+	local player_name = player:get_player_name()
+	local nearby_block_hpos_set = spawnit._nearby_block_hpos_set_by_player_name[player_name]
+	for hpos in nearby_block_hpos_set:iterate() do
 		local nearby = spawnit._nearby_players_by_block_hpos[hpos]
 		nearby:discard(player_name)
 		if nearby:is_empty() then
@@ -247,7 +255,7 @@ futil.register_globalstep({
 		if s.disable_spawns_near_afk then
 			local afk_players = afk_api.get_afk_players(s.min_afk_time)
 			for i = 1, #afk_players do
-				discard_all_player_poss(afk_players[i])
+				discard_all_visible_blocks(afk_players[i])
 			end
 		end
 

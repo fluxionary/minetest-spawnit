@@ -1,6 +1,6 @@
 [active object region management]
 # time between active object area updates (in seconds)
-spawnit:update_ao_period (update ao period) float 3
+spawnit:update_ao_period (update ao period) float 2.9
 
 # maximum number of players to look at when determining whether active object areas need to be recalculated
 spawnit:update_player_ao_trials (update player ao trials) int 10 1
