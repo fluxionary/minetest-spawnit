@@ -21,7 +21,7 @@ spawnit:too_far_vertical_ratio (too far horizontal ratio) float 1.25
 spawnit:disable_spawns_near_afk (disable spawns near afk players) bool true
 
 # time after which a player will be considered AFK
-spawnit:min_afk_time (min afk time) float 60
+spawnit:min_afk_time (min afk time) float 300
 
 [async environment]
 # how many microseconds to spend processing queue items per second. actual usage will tend to be a bit over this value.
