@@ -49,10 +49,12 @@ local function discard_all_visible_blocks(player)
 	local player_name = player:get_player_name()
 	local nearby_block_hpos_set = spawnit._nearby_block_hpos_set_by_player_name[player_name]
 	for hpos in nearby_block_hpos_set:iterate() do
-		local visibility = spawnit._visibility_by_block_hpos[hpos]
-		visibility:discard(player_name)
-		if visibility:is_empty() then
-			spawnit._visibility_by_block_hpos[hpos] = nil
+		local visibility = rawget(spawnit._visibility_by_block_hpos, hpos)
+		if visibility then
+			visibility:discard(player_name)
+			if visibility:is_empty() then
+				spawnit._visibility_by_block_hpos[hpos] = nil
+			end
 		end
 	end
 end
@@ -255,6 +257,7 @@ futil.register_globalstep({
 		if s.disable_spawns_near_afk then
 			local afk_players = afk_api.get_afk_players(s.min_afk_time)
 			for i = 1, #afk_players do
+				-- perhaps there are no visible blocks, but this isn't expensive
 				discard_all_visible_blocks(afk_players[i])
 			end
 		end
