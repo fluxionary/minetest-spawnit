@@ -1,3 +1,5 @@
+-- the contents of this file are loaded in the async environment. the published APIs are not available
+
 spawnit = fmod.create()
 
 spawnit.dofile("util")
