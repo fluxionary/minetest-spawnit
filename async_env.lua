@@ -1,4 +1,5 @@
--- the contents of this file are loaded in the async environment. the published APIs are not available
+-- the contents of this file are loaded in the async environment. the published APIs are not available from
+-- the main thread.
 
 spawnit = fmod.create()
 
