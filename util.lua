@@ -408,7 +408,7 @@ local function wrong_distance_to_players(def, pos)
 		local found_any = false
 		for i = 1, #objs do
 			local obj = objs[i]
-			if minetest.is_player(obj) then
+			if futil.is_player(obj) then
 				if pos:distance(obj:get_pos()) <= def.min_player_distance then
 					found_any = false
 					break
@@ -423,7 +423,7 @@ local function wrong_distance_to_players(def, pos)
 	elseif def.min_player_distance >= 0 then
 		local objs = get_objects_inside_radius(pos, def.min_player_distance)
 		for i = 1, #objs do
-			if minetest.is_player(objs[i]) then
+			if futil.is_player(objs[i]) then
 				return true
 			end
 		end
@@ -431,7 +431,7 @@ local function wrong_distance_to_players(def, pos)
 		local objs = get_objects_inside_radius(pos, def.max_player_distance)
 		local found_any = false
 		for i = 1, #objs do
-			if minetest.is_player(objs[i]) then
+			if futil.is_player(objs[i]) then
 				found_any = true
 				break
 			end

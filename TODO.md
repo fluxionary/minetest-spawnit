@@ -10,8 +10,8 @@ before release:
 
 FUTURE:
 * separate the active object area calculator into a separate mod so that others can use it.
-* create an AFK detector API mod
 * need to be able to somehow say "spawn on leaves, but only if they're solid"
   * and/or/not/parentheses
 * add way to toggle/filter spawns during runtime, based on groups or ???
 * show exponential moving averages of some HUD stat values
+*
