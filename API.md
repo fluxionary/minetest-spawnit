@@ -26,6 +26,12 @@ spawnit.register({
     -- this mob will only spawn between dusk and dawn
 	min_time_of_day = .75,  -- 0/1 is midnight, 0.25 is dawn-ish, 0.5 is noon, .75 is dusk-ish
 	max_time_of_day = .25,  -- set min to 0, and max to 1, to indicate any time (default)
+    -- WARNING: biome information, including heat and humidity, is unreliable when using valleys mapgen!
+	biome = { ".*" },  -- any biome.
+	min_heat = -math.huge,
+	max_heat = math.huge,
+	min_humidity = -math.huge,
+	max_humidity = math.huge,
 	min_player_distance = 12,
 	max_player_distance = -1,  -- no limit
 

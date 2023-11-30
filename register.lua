@@ -63,6 +63,11 @@ local default_values = {
 	max_time_of_day = 1,
 	min_natural_light = 0,
 	max_natural_light = 15,
+	biome = {},
+	min_heat = -math.huge,
+	max_heat = math.huge,
+	min_humidity = -math.huge,
+	max_humidity = math.huge,
 	min_player_distance = -1, -- no limit
 	max_player_distance = -1, -- no limit
 }
@@ -96,6 +101,11 @@ local valid_keys = futil.Set({
 	"max_time_of_day",
 	"min_natural_light",
 	"max_natural_light",
+	"biome",
+	"min_heat",
+	"max_heat",
+	"min_humidity",
+	"max_humidity",
 	"min_player_distance",
 	"max_player_distance",
 	"collisionbox",

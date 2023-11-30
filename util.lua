@@ -1,6 +1,7 @@
 local math_ceil = math.ceil
 local math_cos = math.cos
 local math_floor = math.floor
+local math_huge = math.huge
 local math_max = math.max
 local math_min = math.min
 local math_pi = math.pi
@@ -17,6 +18,8 @@ local in_bounds = futil.math.in_bounds
 local random_choice = futil.random.choice
 local random_sample = futil.random.sample
 
+local get_biome_data = minetest.get_biome_data
+local get_biome_name = minetest.get_biome_name
 local get_node_light = minetest.get_node_light
 local get_natural_light = minetest.get_natural_light
 local get_objects_inside_radius = minetest.get_objects_inside_radius
@@ -88,6 +91,7 @@ local function max_z_offset(cb)
 	return math_max(0, math_ceil(cb[6] - 0.5))
 end
 
+-- TODO this should be a generator in case we don't need to iterate them all
 function spawnit.util.get_in_entity_indices(def, va, i)
 	local cb = def.collisionbox
 	local pos0 = va:position(i)
@@ -103,6 +107,7 @@ function spawnit.util.get_in_entity_indices(def, va, i)
 	return indices
 end
 
+-- TODO this should be a generator in case we don't need to iterate them all
 function spawnit.util.get_under_entity_indices(def, va, i)
 	local cb = def.collisionbox
 	local pos0 = va:position(i)
@@ -117,6 +122,7 @@ function spawnit.util.get_under_entity_indices(def, va, i)
 	return indices
 end
 
+-- TODO this should be a generator in case we don't need to iterate them all
 -- get positions inside or touching the entity on 6 faces. doesn't include edges and corners of the bounding box
 function spawnit.util.get_near_entity_indices(def, va, i)
 	local cb = def.collisionbox
@@ -252,6 +258,45 @@ local function check_pos_for_cluster(def, pos)
 	-- protection could have changed, so check again
 	if (not def.spawn_in_protected) and minetest.is_protected(pos, def.entity_name) then
 		return false, true
+	end
+
+	local biome = def.biome
+	local bdata
+	if #biome > 0 then
+		bdata = get_biome_data(pos)
+		if bdata then -- get_biome_data can fail and return nil? i'm not sure why, but it's documented.
+			local biome_name = get_biome_name(bdata.biome)
+			local biome_matches = false
+			for i = 1, #biome do
+				if biome_name:match(biome[i]) then
+					biome_matches = true
+					break
+				end
+			end
+			if not biome_matches then
+				return false, true
+			end
+		end
+	end
+
+	if def.min_heat > -math_huge or def.max_heat < math_huge then
+		bdata = bdata or get_biome_data(pos)
+		if bdata then
+			local heat = bdata.heat
+			if not in_bounds(def.min_heat, heat, def.max_heat) then
+				return false, true
+			end
+		end
+	end
+
+	if def.min_humidity > -math_huge or def.max_humidity < math_huge then
+		bdata = bdata or get_biome_data(pos)
+		if bdata then
+			local humidity = bdata.humidity
+			if not in_bounds(def.min_humidity, humidity, def.max_humidity) then
+				return false, true
+			end
+		end
 	end
 
 	if def.check_pos then
