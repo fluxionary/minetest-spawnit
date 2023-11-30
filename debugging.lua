@@ -101,28 +101,61 @@ end
 
 local can_be_in_by_entity_name = {}
 
-local function get_spawn_def(entity_name)
+local function get_spawn_defs(entity_name)
+	local defs = {}
 	for _, def in pairs(spawnit.registered_spawns) do
-		if def.entity_name == entity_name then
-			return def
+		if type(def.entity_name) == "string" then
+			if def.entity_name == entity_name then
+				defs[#defs + 1] = def
+			end
+		else
+			for name in pairs(def.entity_name) do
+				if name == entity_name then
+					defs[#defs + 1] = def
+					break
+				end
+			end
 		end
 	end
+	return defs
 end
 
-local function get_spawn_def_index(entity_name)
+local function get_spawn_def_indices(entity_name)
+	local def_indices = {}
 	for def_index, def in pairs(spawnit.registered_spawns) do
-		if def.entity_name == entity_name then
-			return def_index
+		if type(def.entity_name) == "string" then
+			if def.entity_name == entity_name then
+				def_indices[#def_indices + 1] = def_index
+			end
+		else
+			for name in pairs(def.entity_name) do
+				if name == entity_name then
+					def_indices[#def_indices + 1] = def_index
+					break
+				end
+			end
 		end
 	end
+	return def_indices
 end
 
 local function get_can_be_in(entity_name)
 	local can_be_in = can_be_in_by_entity_name[entity_name]
 	if not can_be_in then
-		local def = get_spawn_def(entity_name)
-		if def then
-			can_be_in = build_can_be(def.within)
+		local defs = get_spawn_defs(entity_name)
+		if #defs > 0 then
+			local can_be_ins = {}
+			for i = 1, #defs do
+				can_be_ins[i] = build_can_be(defs[i].within)
+			end
+			can_be_in = function(cid)
+				for i = 1, #can_be_ins do
+					if can_be_ins[i](cid) then
+						return true
+					end
+				end
+				return false
+			end
 		else
 			can_be_in = function()
 				return false
@@ -256,8 +289,8 @@ minetest.register_chatcommand("show_all_in_block", {
 		if not entity_def then
 			return false, "no such entity"
 		end
-		local def_index = get_spawn_def_index(entity_name)
-		if not def_index then
+		local def_indices = get_spawn_def_indices(entity_name)
+		if #def_indices == 0 then
 			return false, "no spawn defintion for entity"
 		end
 		local block_pos = futil.vector.get_blockpos(pos)
@@ -269,8 +302,13 @@ minetest.register_chatcommand("show_all_in_block", {
 		if type(spawn_poss) == "string" then
 			return false, spawn_poss -- might be calculating
 		end
-		local hpos_set = spawn_poss:get_hpos_set(def_index)
-		if not hpos_set then
+		local hpos_set = Set()
+		for i = 1, #def_indices do
+			for hpos in spawn_poss:get_hpos_set(def_indices[i]):iterate() do
+				hpos_set:add(hpos)
+			end
+		end
+		if hpos_set:is_empty() then
 			return false, "the mob cannot spawn in that location"
 		end
 
