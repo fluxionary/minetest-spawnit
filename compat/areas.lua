@@ -9,7 +9,7 @@ minetest.register_chatcommand("area_spawnit", {
 			return false, S("invalid argument. please give an area id.")
 		end
 		if not areas:isAreaOwner(id, name) then
-			return false, S("area @1 does not exist or is not owned by you.", id)
+			return false, S("area @1 does not exist or is not owned by you.", tostring(id))
 		end
 		local spawnit_disabled = not areas.areas[id].spawnit_disabled
 		-- Save false as nil to avoid inflating the DB.
