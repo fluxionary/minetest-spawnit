@@ -196,7 +196,7 @@ local function update_visibility(player)
 			end
 			if is_too_far(player_pos, block_hpos) then
 				nearby_block_hpos_set:remove(block_hpos)
-				nearby:remove(player_name)
+				nearby:discard(player_name)
 				if nearby:is_empty() then
 					spawnit._nearby_players_by_block_hpos[block_hpos] = nil
 					spawnit._clear_spawn_poss(block_hpos)
