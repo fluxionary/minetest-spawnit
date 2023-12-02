@@ -346,6 +346,18 @@ function spawnit._register_mob_lifetimer(entity_name)
 	local old_on_activate = def.on_activate
 	function def.on_activate(self, staticdata, dtime_s)
 		self._spawnit_lifetimer = minetest.get_us_time()
+		local pos = self.object:get_pos()
+		if pos then
+			spawnit.log(
+				"action",
+				"%s @ %s activates in %s mapblock",
+				self.name or self.object:get_entity_name(),
+				minetest.pos_to_string(pos),
+				minetest.compare_block_status(pos:round(), "active") and "active" or "inactive"
+			)
+		else
+			spawnit.log("action", "%s activates with no position?!")
+		end
 		if old_on_activate then
 			return old_on_activate(self, staticdata, dtime_s)
 		end
@@ -369,7 +381,7 @@ function spawnit._register_mob_lifetimer(entity_name)
 			)
 		end
 		if old_on_deactivate then
-			return old_on_activate(self, removal)
+			return old_on_deactivate(self, removal)
 		end
 	end
 end
