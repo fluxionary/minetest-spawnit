@@ -1,15 +1,29 @@
-local S = spawnit.S
-local s = spawnit.settings
-
 local math_ceil = math.ceil
 local math_floor = math.floor
 local math_max = math.max
 local math_min = math.min
 
+local v_new = vector.new
+local v_zero = vector.zero
+
+local add_particle = minetest.add_particle
+local compare_block_status = minetest.compare_block_status
 local get_content_id = minetest.get_content_id
+local get_node = minetest.get_node
+local get_position_from_hash = minetest.get_position_from_hash
+local get_us_time = minetest.get_us_time
+local hash_node_position = minetest.hash_node_position
+local pos_to_string = minetest.pos_to_string
 
 local DefaultTable = futil.DefaultTable
 local Set = futil.Set
+local get_block_center = futil.vector.get_block_center
+local get_blockpos = futil.vector.get_blockpos
+
+local has = spawnit.has
+local log = spawnit.log
+local S = spawnit.S
+local s = spawnit.settings
 
 local is_full_nodebox = spawnit.util.is_full_nodebox
 
@@ -92,7 +106,7 @@ function spawnit._in_entity_poss(cb, pos)
 	for y = y0 + math_min(0, math_floor(cb[2] + 0.5)), y0 + math_max(0, math_ceil(cb[5] - 0.5)) do
 		for x = x0 + math_min(0, math_floor(cb[1] + 0.5)), x0 + math_max(0, math_ceil(cb[4] - 0.5)) do
 			for z = z0 + math_min(0, math_floor(cb[3] + 0.5)), z0 + math_max(0, math_ceil(cb[6] - 0.5)) do
-				poss[#poss + 1] = vector.new(x, y, z)
+				poss[#poss + 1] = v_new(x, y, z)
 			end
 		end
 	end
@@ -168,7 +182,7 @@ end
 
 local function check_can_be_in_single(entity_name, pos)
 	local can_be_in = get_can_be_in(entity_name)
-	local cid = minetest.get_content_id(minetest.get_node(pos).name)
+	local cid = get_content_id(get_node(pos).name)
 	return can_be_in(cid)
 end
 
@@ -178,7 +192,7 @@ local function check_can_be_in(entity_name, pos)
 	local in_entity_poss = spawnit._in_entity_poss(cb, pos)
 	for j = 1, #in_entity_poss do
 		local pos2 = in_entity_poss[j]
-		local cid = minetest.get_content_id(minetest.get_node(pos2).name)
+		local cid = get_content_id(get_node(pos2).name)
 		if not can_be_in(cid) then
 			return false
 		end
@@ -186,7 +200,7 @@ local function check_can_be_in(entity_name, pos)
 	return true
 end
 
-minetest.register_chatcommand("show_in_entity_poss", {
+minetest.register_chatcommand("spawnit_show_in_entity_poss", {
 	description = S("see the extent of an entity if it spawns at the marked position"),
 	params = S("<entity_name>"),
 	privs = { [s.debug_priv] = true },
@@ -195,8 +209,7 @@ minetest.register_chatcommand("show_in_entity_poss", {
 		if not player then
 			return false, "you are not logged in"
 		end
-		local pos = (minetest.get_modpath("worldedit") and worldedit.pos1[name])
-			or (minetest.get_modpath("areas") and areas.pos1[name])
+		local pos = (has.worldedit and worldedit.pos1[name]) or (has.areas and areas.pos1[name])
 		if not pos then
 			return false, "mark a point w/ worldedit or areas"
 		end
@@ -224,7 +237,7 @@ minetest.register_chatcommand("show_in_entity_poss", {
 	end,
 })
 
-minetest.register_chatcommand("check_can_be_in", {
+minetest.register_chatcommand("spawnit_check_can_be_in", {
 	description = S("check whether the entity can spawn at the marked point"),
 	params = S("<entity_name>"),
 	privs = { [s.debug_priv] = true },
@@ -233,8 +246,7 @@ minetest.register_chatcommand("check_can_be_in", {
 		if not player then
 			return false, "you are not logged in"
 		end
-		local pos = (minetest.get_modpath("worldedit") and worldedit.pos1[name])
-			or (minetest.get_modpath("areas") and areas.pos1[name])
+		local pos = (has.worldedit and worldedit.pos1[name]) or (has.areas and areas.pos1[name])
 		if not pos then
 			return false, "mark a point w/ worldedit or areas"
 		end
@@ -271,7 +283,7 @@ minetest.register_chatcommand("check_can_be_in", {
 	end,
 })
 
-minetest.register_chatcommand("show_all_in_block", {
+minetest.register_chatcommand("spawnit_show_all_in_block", {
 	description = S("show all spawn positions in a mapblock"),
 	params = S("<entity_name>"),
 	privs = { [s.debug_priv] = true },
@@ -280,8 +292,7 @@ minetest.register_chatcommand("show_all_in_block", {
 		if not player then
 			return false, "you are not logged in"
 		end
-		local pos = (minetest.get_modpath("worldedit") and worldedit.pos1[name])
-			or (minetest.get_modpath("areas") and areas.pos1[name])
+		local pos = (has.worldedit and worldedit.pos1[name]) or (has.areas and areas.pos1[name])
 		if not pos then
 			return false, "mark a point w/ worldedit or areas"
 		end
@@ -293,8 +304,8 @@ minetest.register_chatcommand("show_all_in_block", {
 		if #def_indices == 0 then
 			return false, "no spawn defintion for entity"
 		end
-		local block_pos = futil.vector.get_blockpos(pos)
-		local block_hpos = minetest.hash_node_position(block_pos)
+		local block_pos = get_blockpos(pos)
+		local block_hpos = hash_node_position(block_pos)
 		local spawn_poss = spawnit._spawn_poss_by_block_hpos[block_hpos]
 		if not spawn_poss then
 			return false, "nothing currently spawning at that location"
@@ -313,7 +324,7 @@ minetest.register_chatcommand("show_all_in_block", {
 		end
 
 		for hpos in hpos_set:iterate() do
-			local pos2 = minetest.get_position_from_hash(hpos)
+			local pos2 = get_position_from_hash(hpos)
 			if check_can_be_in(entity_name, pos2) then
 				futil.create_ephemeral_hud(player, 10, {
 					hud_elem_type = "image_waypoint",
@@ -345,18 +356,19 @@ function spawnit._register_mob_lifetimer(entity_name)
 	local def = minetest.registered_entities[entity_name]
 	local old_on_activate = def.on_activate
 	function def.on_activate(self, staticdata, dtime_s)
-		self._spawnit_lifetimer = minetest.get_us_time()
+		self._spawnit_lifetimer = get_us_time()
 		local pos = self.object:get_pos()
 		if pos then
-			spawnit.log(
+			pos = pos:round()
+			log(
 				"action",
 				"%s @ %s activates in %s mapblock",
 				self.name or self.object:get_entity_name(),
-				minetest.pos_to_string(pos),
-				minetest.compare_block_status(pos:round(), "active") and "active" or "inactive"
+				pos_to_string(pos),
+				compare_block_status(pos, "active") and "active" or "INACTIVE"
 			)
 		else
-			spawnit.log("action", "%s activates with no position?!")
+			log("action", "%s activates with no position?!")
 		end
 		if old_on_activate then
 			return old_on_activate(self, staticdata, dtime_s)
@@ -365,13 +377,13 @@ function spawnit._register_mob_lifetimer(entity_name)
 
 	local old_on_deactivate = def.on_deactivate
 	function def.on_deactivate(self, removal)
-		local elapsed = minetest.get_us_time() - self._spawnit_lifetimer
+		local elapsed = get_us_time() - self._spawnit_lifetimer
 		local pos = self.object:get_pos():round()
-		local spos = minetest.pos_to_string(pos)
+		local spos = pos_to_string(pos)
 		if removal then
-			spawnit.log("action", "%s @ %s was removed after %.3fs", entity_name, spos, elapsed / 1e6)
+			log("action", "%s @ %s was removed after %.3fs", entity_name, spos, elapsed / 1e6)
 		else
-			spawnit.log(
+			log(
 				"action",
 				"%s @ %s was deactivated after %.3fs (%s)",
 				entity_name,
@@ -400,8 +412,8 @@ end
 local MAP_BLOCKSIZE = minetest.MAP_BLOCKSIZE
 local BLOCK_MAX_RADIUS = math.sqrt(3) / 2 * MAP_BLOCKSIZE
 function spawnit._get_look_angle_offset_block(player, pos)
-	local blockpos = futil.vector.get_blockpos(pos)
-	local center = futil.vector.get_block_center(blockpos)
+	local blockpos = get_blockpos(pos)
+	local center = get_block_center(blockpos)
 	local player_pos = player:get_pos()
 	local look_dir = player:get_look_dir()
 	local properties = player:get_properties()
@@ -412,3 +424,43 @@ function spawnit._get_look_angle_offset_block(player, pos)
 	local theta = math.acos(vector.dot(look_dir, blockpos_adj) / (look_dir:length() * blockpos_adj:length()))
 	return futil.math.rad2deg(theta)
 end
+
+minetest.register_chatcommand("spawnit_ao_block_visualizer", {
+	description = S("visualize assumed active object blocks for a player (or yourself)."),
+	params = S("[<player_name>]"),
+	privs = { [s.debug_priv] = true },
+	func = function(name, player_name)
+		player_name = player_name:trim()
+		if player_name ~= "" then
+			player_name = canonical_name.get(player_name)
+			if not minetest.player_exists(name) then
+				return false, S("unknown player")
+			elseif not minetest.get_player_by_name(player_name) then
+				return false, S("the player must be logged in")
+			end
+		else
+			if not minetest.get_player_by_name(name) then
+				return false, S("you must be logged in")
+			end
+			player_name = name
+		end
+
+		local nearby_block_hpos_set = spawnit._nearby_block_hpos_set_by_player_name[player_name]
+		for block_hpos in nearby_block_hpos_set:iterate() do
+			local block_pos = get_position_from_hash(block_hpos)
+			local block_center = get_block_center(block_pos)
+			add_particle({
+				pos = block_center,
+				velocity = v_zero(),
+				acceleration = v_zero(),
+				expirationtime = 60,
+				size = 10,
+				collisiondetection = false,
+				collision_removal = false,
+				object_collision = false,
+				vertical = false,
+				texture = "[combine:1x1^[noalpha^[colorize:#FFF8:255",
+			})
+		end
+	end,
+})

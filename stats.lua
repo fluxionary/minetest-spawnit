@@ -66,7 +66,7 @@ function spawnit._get_and_reset_stats()
 
 	stats.stats_gen_time = get_us_time() - start
 
-	if minetest.get_modpath("mesecons_debug") then
+	if spawnit.has.mesecons_debug then
 		stats.avg_lag = mesecons_debug.avg_lag
 	end
 
