@@ -449,12 +449,14 @@ minetest.register_chatcommand("spawnit_ao_block_visualizer", {
 		for block_hpos in nearby_block_hpos_set:iterate() do
 			local block_pos = get_position_from_hash(block_hpos)
 			local block_center = get_block_center(block_pos)
+			-- TODO change to a particle-spawner of short-lived particles so we can turn this into
+			-- TODO a toggle command instead of a timeout
 			add_particle({
 				pos = block_center,
 				velocity = v_zero(),
 				acceleration = v_zero(),
 				expirationtime = 60,
-				size = 10,
+				size = 20,
 				collisiondetection = false,
 				collision_removal = false,
 				object_collision = false,

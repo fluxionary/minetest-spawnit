@@ -32,6 +32,7 @@ end
 
 minetest.register_on_mapblocks_changed(function(modified_blocks, modified_block_count)
 	for hpos in pairs(modified_blocks) do
+		-- TODO: create a timeout to keep this from being recomputed too quickly in case e.g. digging or building
 		spawnit._clear_spawn_poss(hpos)
 	end
 end)
