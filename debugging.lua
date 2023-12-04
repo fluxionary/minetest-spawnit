@@ -315,8 +315,11 @@ minetest.register_chatcommand("spawnit_show_all_in_block", {
 		end
 		local hpos_set = Set()
 		for i = 1, #def_indices do
-			for hpos in spawn_poss:get_hpos_set(def_indices[i]):iterate() do
-				hpos_set:add(hpos)
+			local hposs = spawn_poss:get_hpos_set(def_indices[i])
+			if hposs then
+				for hpos in hposs:iterate() do
+					hpos_set:add(hpos)
+				end
 			end
 		end
 		if hpos_set:is_empty() then
