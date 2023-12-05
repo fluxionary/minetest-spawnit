@@ -76,3 +76,6 @@ spawnit:track_memory_usage (track memory usage) bool false
 
 # if true, log when mobs die or are unloaded, along w/ how long they have been active.
 spawnit:track_mob_lifetime (track mob lifetime) bool false
+
+# how long to display spawn waypoint HUDs, in seconds.
+spawnit:spawn_waypoint_timeout (spawn waypoint timeout) float 10 0

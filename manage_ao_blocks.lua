@@ -22,25 +22,11 @@ local is_too_far = spawnit.util.is_too_far
 local active_block_range = tonumber(minetest.settings:get("active_block_range")) or 4
 local active_object_send_range_blocks = tonumber(minetest.settings:get("active_object_send_range_blocks")) or 8
 
--- for a given mapblock, who is it "visible" to - that is, who is keeping it in range for active objects?
--- if a block is no longer visible to any players, it is removed from this map.
-spawnit._visibility_by_block_hpos = futil.DefaultTable(function()
-	return Set()
-end)
-
 function spawnit.is_active_object_block(pos)
 	local blockpos = get_blockpos(pos)
 	local block_hpos = hash_node_position(blockpos)
 	return rawget(spawnit._visibility_by_block_hpos, block_hpos) ~= nil
 end
-
--- for a given mapblock, who was it visible to "recently"? if a player moves too far away from a block,
--- they are no longer nearby. if it is not near any players, it is removed from this map.
-spawnit._nearby_players_by_block_hpos = futil.DefaultTable(function()
-	return Set()
-end)
--- for a given player, which blocks are near them?
-spawnit._nearby_block_hpos_set_by_player_name = {}
 
 local function discard_all_visible_blocks(player)
 	local player_name = player:get_player_name()
@@ -251,7 +237,7 @@ futil.register_globalstep({
 			local afk_players = afk_api.get_afk_players(s.min_afk_time)
 			for i = 1, #afk_players do
 				-- perhaps there are no visible blocks, but this isn't expensive
-				discard_all_player_poss(afk_players[i])
+				discard_all_visible_blocks(afk_players[i])
 			end
 		end
 

@@ -35,6 +35,7 @@ local function try_spawn_mob(def_index, def)
 			local spos = minetest.pos_to_string(pos)
 			if obj then
 				spawnit.log("action", "spawned %s @ %s", entity_name, spos)
+				spawnit._add_spawn_waypoint(pos, entity_name)
 				if def.after_spawn then
 					def.after_spawn(pos, obj)
 				end

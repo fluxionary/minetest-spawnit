@@ -327,7 +327,9 @@ function spawnit.util.pick_a_cluster(def_index, def)
 	end
 	local block_hposs_list = {}
 	for block_hpos in block_hposs_set:iterate() do
-		block_hposs_list[#block_hposs_list + 1] = block_hpos
+		if rawget(spawnit._visibility_by_block_hpos, block_hpos) then
+			block_hposs_list[#block_hposs_list + 1] = block_hpos
+		end
 	end
 	local poss = {}
 	if #block_hposs_list > s.pick_cluster_trials then

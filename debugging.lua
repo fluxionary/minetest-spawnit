@@ -6,7 +6,7 @@ local math_min = math.min
 local v_new = vector.new
 local v_zero = vector.zero
 
-local add_particle = minetest.add_particle
+local add_particlespawner = minetest.add_particlespawner
 local compare_block_status = minetest.compare_block_status
 local get_content_id = minetest.get_content_id
 local get_node = minetest.get_node
@@ -428,6 +428,19 @@ function spawnit._get_look_angle_offset_block(player, pos)
 	return futil.math.rad2deg(theta)
 end
 
+local block_particles_by_player_name = {}
+
+minetest.register_on_leaveplayer(function(player)
+	local player_name = player:get_player_name()
+	local block_particles = block_particles_by_player_name[player_name]
+	if block_particles then
+		for i = 1, #block_particles do
+			minetest.delete_particlespawner(block_particles[i])
+		end
+		block_particles_by_player_name[player_name] = nil
+	end
+end)
+
 minetest.register_chatcommand("spawnit_ao_block_visualizer", {
 	description = S("visualize assumed active object blocks for a player (or yourself)."),
 	params = S("[<player_name>]"),
@@ -448,24 +461,89 @@ minetest.register_chatcommand("spawnit_ao_block_visualizer", {
 			player_name = name
 		end
 
+		local block_particles = block_particles_by_player_name[player_name]
+		if block_particles then
+			for i = 1, #block_particles do
+				minetest.delete_particlespawner(block_particles[i])
+			end
+			block_particles_by_player_name[player_name] = nil
+			return true, S("visualization removed")
+		else
+			block_particles = {}
+		end
+
 		local nearby_block_hpos_set = spawnit._nearby_block_hpos_set_by_player_name[player_name]
 		for block_hpos in nearby_block_hpos_set:iterate() do
-			local block_pos = get_position_from_hash(block_hpos)
-			local block_center = get_block_center(block_pos)
-			-- TODO change to a particle-spawner of short-lived particles so we can turn this into
-			-- TODO a toggle command instead of a timeout
-			add_particle({
-				pos = block_center,
-				velocity = v_zero(),
-				acceleration = v_zero(),
-				expirationtime = 60,
-				size = 20,
-				collisiondetection = false,
-				collision_removal = false,
-				object_collision = false,
-				vertical = false,
-				texture = "[combine:1x1^[noalpha^[colorize:#FFF8:255",
-			})
+			if rawget(spawnit._visibility_by_block_hpos, block_hpos) then
+				local block_pos = get_position_from_hash(block_hpos)
+				local block_center = get_block_center(block_pos)
+
+				local id = add_particlespawner({
+					amount = 1, -- 1 per second
+					time = 0, -- forever
+					collisiondetection = false,
+					collision_removal = false,
+					object_collision = false,
+					vertical = false,
+					texture = "[combine:1x1^[noalpha^[colorize:#FFF8:255",
+
+					minpos = block_center,
+					maxpos = block_center,
+					minvel = v_zero(),
+					maxvel = v_zero(),
+					minacc = v_zero(),
+					maxacc = v_zero(),
+					minexptime = 2,
+					maxexptime = 2,
+					minsize = 20,
+					maxsize = 20,
+				})
+				if id >= 0 then
+					block_particles[#block_particles + 1] = id
+				end
+			end
 		end
+
+		block_particles_by_player_name[player_name] = block_particles
+		return true, S("visualization added")
 	end,
 })
+
+local show_waypoints_by_player_name = {}
+
+minetest.register_on_leaveplayer(function(player)
+	show_waypoints_by_player_name[player:get_player_name()] = nil
+end)
+
+minetest.register_chatcommand("spawnit_toggle_spawn_waypoints", {
+	-- every time an entity spawns, generate a waypoint that lasts for 10 seconds or something
+	description = S(""),
+	privs = { [s.debug_priv] = true },
+	func = function(name)
+		if not minetest.get_player_by_name(name) then
+			return false, S("you must be logged in")
+		end
+		if show_waypoints_by_player_name[name] then
+			show_waypoints_by_player_name = nil
+			return true, S("spawn waypoints disabled (may take a few seconds for all to disappear)")
+		end
+		show_waypoints_by_player_name[name] = true
+		return true, S("spawn waypoints enabled")
+	end,
+})
+
+function spawnit._add_spawn_waypoint(pos, entity_name)
+	for player_name in pairs(show_waypoints_by_player_name) do
+		local player = minetest.get_player_by_name(player_name)
+		if player then
+			futil.create_ephemeral_hud(player, s.spawn_waypoint_timeout, {
+				hud_elem_type = "waypoint",
+				name = entity_name,
+				text = S("m"),
+				number = 0xffffff,
+				precision = 1,
+				world_pos = pos,
+			})
+		end
+	end
+end

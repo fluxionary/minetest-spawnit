@@ -10,6 +10,7 @@ spawnit.dofile("stats")
 
 spawnit.dofile("spawn_positions_class")
 
+spawnit.dofile("data")
 spawnit.dofile("manage_ao_blocks")
 spawnit.dofile("manage_forceload")
 spawnit.dofile("manage_spawn_positions")

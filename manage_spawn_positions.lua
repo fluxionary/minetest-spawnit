@@ -9,10 +9,8 @@ local get_block_bounds = futil.vector.get_block_bounds
 
 local s = spawnit.settings
 
-spawnit._spawn_poss_by_block_hpos = {}
-spawnit._block_hposs_by_def = futil.DefaultTable(function()
-	return futil.Set()
-end)
+local dedicated_server_step = tonumber(minetest.settings:get("dedicated_server_step")) or 0.09
+local us_per_step = s.queue_us_per_s * dedicated_server_step
 
 function spawnit._clear_spawn_poss(hpos)
 	local spawn_poss = spawnit._spawn_poss_by_block_hpos[hpos]
@@ -100,9 +98,6 @@ local function make_callback(block_hpos)
 		end)
 	end
 end
-
-local dedicated_server_step = tonumber(minetest.settings:get("dedicated_server_step")) or 0.09
-local us_per_step = s.queue_us_per_s * dedicated_server_step
 
 spawnit._find_spawn_poss_queue = action_queues.create_serverstep_queue({
 	us_per_step = us_per_step,
