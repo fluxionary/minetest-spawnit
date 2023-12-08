@@ -61,7 +61,7 @@ spawnit:default_spawn_in_protected (default spawn in protected) bool true
 
 # for integration w/ the "areas" mod.
 # if false, mobs with the spawn_in_protected attribute will not spawn in non-open protected areas unless the
-            /area_spawnit command is used to enable them.
+#           /area_spawnit command is used to enable them.
 # if true, mobs with the spawn_in_protected attribute will spawn in any protected area, unless the
 #           /area_spawnit command is used to disable them.
 spawnit:spawn_in_protected_area (whether to allow spawn in protected areas) bool false
