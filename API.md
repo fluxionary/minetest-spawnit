@@ -38,7 +38,8 @@ spawnit.register({
 
 	collisionbox = nil, -- if not defined, this is inferred from the entity's definition
 
-	should_spawn = function()  end,
+	should_spawn = function()  end,  -- check that the global state is good for spawning. perhaps we should only spawn
+                                     -- during a blood moon from the astral mod, or something similar.
 	check_pos = function(pos) end,  -- return true to allow spawning at that position, false to disallow
 	after_spawn = function(pos, obj) end,  -- called after a mob has spawned
 })

@@ -54,10 +54,17 @@ spawnit:default_chance (default spawn chance) float 300 1
 # default radius for checking whether other mobs are nearby
 spawnit:default_max_in_area_radius (default max in area radius) float 24
 
-# whether a spawn rule will be triggered in protected areas by default. note that this does *not* override rules which
-# explicitly state whether they apply to protected areas! note that if the areas mod is present, the `/area_spawnit`
-# command can be used to ban *all* spawns within a specific protection area, even if it is "open".
+# whether a rule can spawn mobs in a protected position by default. note that this does *not* override rules
+# which explicitly state whether the mob can spawn in such a position! also, see the spawnit:spawn_in_protected_area
+# for further interaction with the areas mod.
 spawnit:default_spawn_in_protected (default spawn in protected) bool true
+
+# for integration w/ the "areas" mod.
+# if false, mobs with the spawn_in_protected attribute will not spawn in non-open protected areas unless the
+            /area_spawnit command is used to enable them.
+# if true, mobs with the spawn_in_protected attribute will spawn in any protected area, unless the
+#           /area_spawnit command is used to disable them.
+spawnit:spawn_in_protected_area (whether to allow spawn in protected areas) bool false
 
 # default maximum number of positions chosen per rule per mapblock. set this higher if you want more mobs to spawn in
 # the same area without it being unloaded and recomputed.
