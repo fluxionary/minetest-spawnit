@@ -258,6 +258,7 @@ function spawnit.clear_spawns(entity_name)
 end
 
 minetest.register_on_mods_loaded(function()
+	-- use serialize and not json, as there might be functions and "complex" data
 	local contents = minetest.serialize(spawnit.registered_spawns)
 	local filename = futil.path_concat(minetest.get_worldpath(), "spawnit_rules.serialized")
 	futil.write_file(filename, contents)

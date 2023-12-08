@@ -1,26 +1,88 @@
 local v_new = vector.new
 
+local math_cos = math.cos
+local math_max = math.max
+local math_pi = math.pi
+local math_sqrt = math.sqrt
+
 local compare_block_status = minetest.compare_block_status
 local get_position_from_hash = minetest.get_position_from_hash
 local get_us_time = minetest.get_us_time
 local hash_node_position = minetest.hash_node_position
 
 local Set = futil.Set
+local deg2rad = futil.math.deg2rad
 local get_block_center = futil.vector.get_block_center
 local get_block_min = futil.vector.get_block_min
 local get_blockpos = futil.vector.get_blockpos
 local is_blockpos_inside_world_bounds = futil.vector.is_blockpos_inside_world_bounds
 
+local ACTIVE_BLOCK_RANGE = tonumber(minetest.settings:get("active_block_range")) or 4
+local ACTIVE_OBJECT_SEND_RANGE_BLOCKS = tonumber(minetest.settings:get("active_object_send_range_blocks")) or 8
+local MAP_BLOCKSIZE = minetest.MAP_BLOCKSIZE
+local MOVEMENT_WALK_SPEED = tonumber(minetest.settings:get("movement_speed_walk")) or 4.0
+
+local BLOCK_MAX_RADIUS = math.sqrt(3) * MAP_BLOCKSIZE / 2
+local MAX_OBJECT_DISTANCE = MAP_BLOCKSIZE * (math_max(ACTIVE_BLOCK_RANGE, ACTIVE_OBJECT_SEND_RANGE_BLOCKS) + 1)
+
 local s = spawnit.settings
 
-local get_fov = spawnit.util.get_fov
-local has_changed_pos_or_look = spawnit.util.has_changed_pos_or_look
-local is_block_in_sight = spawnit.util.is_block_in_sight
-local is_moving_too_fast = spawnit.util.is_moving_too_fast
-local is_too_far = spawnit.util.is_too_far
+-- we have no way of telling what the client's desired FOV is. if the server isn't overriding it, assume 72 degrees.
+local function get_fov(player)
+	local fov, is_multiplier = player:get_fov()
+	if is_multiplier then
+		fov = 72 * fov
+	elseif fov == 0 then
+		fov = 72
+	end
+	return deg2rad(fov)
+end
 
-local active_block_range = tonumber(minetest.settings:get("active_block_range")) or 4
-local active_object_send_range_blocks = tonumber(minetest.settings:get("active_object_send_range_blocks")) or 8
+local previous_pos_and_look_by_player_name = {}
+
+minetest.register_on_joinplayer(function(player)
+	local player_name = player:get_player_name()
+	previous_pos_and_look_by_player_name[player_name] = { player:get_pos(), player:get_look_dir() }
+end)
+
+minetest.register_on_leaveplayer(function(player)
+	local player_name = player:get_player_name()
+	previous_pos_and_look_by_player_name[player_name] = nil
+end)
+
+-- used to check whether a player's active blocks need to be updated
+local function has_changed_pos_or_look(player)
+	local player_name = player:get_player_name()
+	local pos = player:get_pos()
+	local look = player:get_look_dir()
+	local previous_pos, previous_look = unpack(previous_pos_and_look_by_player_name[player_name])
+	previous_pos_and_look_by_player_name[player_name] = { pos, look }
+	if ACTIVE_OBJECT_SEND_RANGE_BLOCKS <= ACTIVE_BLOCK_RANGE then
+		return not pos:equals(previous_pos)
+	else
+		return not (pos:equals(previous_pos) and look:equals(previous_look))
+	end
+end
+
+-- is a block at a blockpos considered to be "within the sight of a player" given where they're looking?
+-- https://github.com/minetest/minetest/blob/4a14a187991c25e8942a7c032b74c468872a51c7/src/util/numeric.cpp#L117-L171
+local function is_block_in_sight(blockpos, camera_pos, camera_dir, camera_fov, r_blocks)
+	local r_nodes = r_blocks * MAP_BLOCKSIZE
+	local center = get_block_center(blockpos)
+	local relative = center - camera_pos
+	local d = math_max(0, relative:length() - BLOCK_MAX_RADIUS)
+	if d == 0 then
+		return true
+	elseif d > r_nodes then
+		return false
+	end
+
+	local adjdist = BLOCK_MAX_RADIUS / math_cos((math_pi - camera_fov) / 2)
+	local blockpos_adj = center - (camera_pos - camera_dir * adjdist)
+	local dforward = blockpos_adj:dot(camera_dir)
+	local cosangle = dforward / blockpos_adj:length()
+	return cosangle >= math_cos(camera_fov * 0.55)
+end
 
 function spawnit.is_active_object_block(pos)
 	local blockpos = get_blockpos(pos)
@@ -67,6 +129,32 @@ minetest.register_on_leaveplayer(function(player)
 	spawnit._nearby_block_hpos_set_by_player_name[player_name] = nil
 end)
 
+local function is_moving_too_fast(obj)
+	local max_speed = s.player_moved_too_fast_ratio * MOVEMENT_WALK_SPEED
+	local attached = obj:get_attach()
+	while attached do
+		obj = attached
+		attached = obj:get_attach()
+	end
+
+	if obj:get_velocity():length() >= max_speed then
+		return true
+	end
+end
+
+-- if a block is too far from a player, we will remove it from the cached data.
+local function is_too_far(player_pos, block_hpos)
+	local blockpos = get_position_from_hash(block_hpos)
+	local center = get_block_center(blockpos)
+	local dx = (player_pos.x - center.x) ^ 2
+	local dy = (player_pos.y - center.y) ^ 2
+	local dz = (player_pos.z - center.z) ^ 2
+	local too_far_horizontal_ratio = s.too_far_horizontal_ratio ^ 2
+	local too_far_vertical_ratio = s.too_far_vertical_ratio ^ 2
+	local weighted_distance = math_sqrt((dx + dz) / too_far_horizontal_ratio + dy / too_far_vertical_ratio)
+	return weighted_distance > MAX_OBJECT_DISTANCE
+end
+
 -- see `doc/active object regions.md`
 -- see also `ActiveBlockList::update` in "serverenvironment.cpp" in the minetest source code
 local function get_ao_block_hpos_set(player)
@@ -82,7 +170,7 @@ local function get_ao_block_hpos_set(player)
 	local player_blockpos = get_blockpos(player_pos)
 	local x0, y0, z0 = player_blockpos.x, player_blockpos.y, player_blockpos.z
 	-- get active blocks
-	local r = active_block_range
+	local r = ACTIVE_BLOCK_RANGE
 	for x = x0 - r, x0 + r do
 		for y = y0 - r, y0 + r do
 			for z = z0 - r, z0 + r do
@@ -94,7 +182,7 @@ local function get_ao_block_hpos_set(player)
 		end
 	end
 
-	if active_object_send_range_blocks <= active_block_range then
+	if ACTIVE_OBJECT_SEND_RANGE_BLOCKS <= ACTIVE_BLOCK_RANGE then
 		return block_hpos_set
 	end
 
@@ -108,7 +196,7 @@ local function get_ao_block_hpos_set(player)
 	local fov = get_fov(player)
 	-- TODO: this naively looks at every mapblock inside a cube and checks whether it's inside the solid angle,
 	--       possibly we could calculate the maximum extents of the solid angle, and only check within those?
-	r = active_object_send_range_blocks - 1 -- TODO: for some reason w/out -1, this spawns things too far?
+	r = ACTIVE_OBJECT_SEND_RANGE_BLOCKS - 1 -- TODO: for some reason w/out -1, this spawns things too far?
 	for x = x0 - r, x0 + r do
 		for y = y0 - r, y0 + r do
 			for z = z0 - r, z0 + r do
