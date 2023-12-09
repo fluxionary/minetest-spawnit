@@ -96,8 +96,19 @@ local function check_pos_for_cluster(def, pos)
 	end
 
 	-- protection could have changed, so check again
-	if (not def.spawn_in_protected) and minetest.is_protected(pos, "") then
-		return false, true
+	if not def.spawn_in_protected then
+		if type(def.entity_name) == "string" then
+			if minetest.is_protected(pos, def.entity_name) then
+				return false, true
+			end
+		elseif type(def.entity_name) == "table" then
+			local entity_name = next(def.entity_name)
+			if type(entity_name) == "string" then
+				if minetest.is_protected(pos, entity_name) then
+					return false, true
+				end
+			end
+		end
 	end
 
 	local biome = def.biome
