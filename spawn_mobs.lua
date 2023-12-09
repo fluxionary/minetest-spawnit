@@ -96,7 +96,7 @@ local function check_pos_for_cluster(def, pos)
 	end
 
 	-- protection could have changed, so check again
-	if (not def.spawn_in_protected) and minetest.is_protected(pos, def.entity_name) then
+	if (not def.spawn_in_protected) and minetest.is_protected(pos, "") then
 		return false, true
 	end
 
