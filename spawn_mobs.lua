@@ -364,6 +364,26 @@ local function try_spawn_mob(def_index, def)
 	return any_success
 end
 
+-- TODO: O(#players * #defs * #nearby_blocks). perhaps cache and update this occasionally?
+local function get_relevant_players_by_def_index(players)
+	local relevant_players_by_def_index = {}
+
+	for def_index, block_hposs in pairs(spawnit._block_hposs_by_def) do
+		local relevant_players = {}
+		for i = 1, #players do
+			local player = players[i]
+			local player_name = player:get_player_name()
+			local nearby_block_hposs = spawnit._nearby_block_hpos_set_by_player_name[player_name]
+			if block_hposs:intersects(nearby_block_hposs) then
+				relevant_players[#relevant_players + 1] = player
+			end
+		end
+		relevant_players_by_def_index[def_index] = relevant_players
+	end
+
+	return relevant_players_by_def_index
+end
+
 -- once every `spawn_mobs_period`, pick some spawn definitions and try to spawn things according to them
 futil.register_globalstep({
 	name = "spawnit:spawn_mobs",
@@ -372,40 +392,33 @@ futil.register_globalstep({
 	func = function(period)
 		local start = get_us_time()
 		local players = minetest.get_connected_players()
+		local relevant_players_by_def_index = get_relevant_players_by_def_index(players)
 		local registered_spawns = spawnit.registered_spawns
 		local num_spawn_rules = #registered_spawns
 		local max_spawn_rules_per_iteration = s.max_spawn_rules_per_iteration
 		local successful_spawns = 0
+		local sample
 		if num_spawn_rules <= max_spawn_rules_per_iteration then
-			registered_spawns = table.copy(registered_spawns)
-			-- because we may abort before doing all of these, shuffle them to prevent
-			-- rules registered earlier from dominating
-			table.shuffle(registered_spawns)
-			for def_index = 1, num_spawn_rules do
-				local def = registered_spawns[def_index]
-				if should_spawn(def, period, players) then
-					if try_spawn_mob(def_index, def) then
-						successful_spawns = successful_spawns + 1
-						if successful_spawns >= s.max_spawn_events_per_iteration then
-							break
-						end
-					end
-				end
-			end
+			sample = sample_with_indices(registered_spawns, num_spawn_rules)
 		else
-			local sample = sample_with_indices(registered_spawns, max_spawn_rules_per_iteration)
-			-- sampling doesn't actually produce something w/ a random order.
-			-- if element 1 is in the sample, it's always at location 1.
+			sample = sample_with_indices(registered_spawns, max_spawn_rules_per_iteration)
 			table.shuffle(sample)
-			local adjusted_period = period * num_spawn_rules / max_spawn_rules_per_iteration
-			for i = 1, max_spawn_rules_per_iteration do
-				local def_index, def = unpack(sample[i])
-				if should_spawn(def, adjusted_period, players) then
-					if try_spawn_mob(def_index, def) then
-						successful_spawns = successful_spawns + 1
-						if successful_spawns >= s.max_spawn_events_per_iteration then
-							break
-						end
+			period = period * num_spawn_rules / max_spawn_rules_per_iteration
+		end
+		-- because we may abort before doing all of these, shuffle them to prevent
+		-- rules registered earlier from dominating
+		-- sampling doesn't actually produce something w/ a random order.
+		-- if element 1 is in the sample, it's always at location 1.
+		table.shuffle(sample)
+		for i = 1, #sample do
+			local def_index, def = unpack(sample[i])
+			local relevant_players = relevant_players_by_def_index[def_index]
+			if relevant_players and should_spawn(def, period, relevant_players) then
+				spawnit.log("action", "should spawn %s", def.entity_name)
+				if try_spawn_mob(def_index, def) then
+					successful_spawns = successful_spawns + 1
+					if successful_spawns >= s.max_spawn_events_per_iteration then
+						break
 					end
 				end
 			end
