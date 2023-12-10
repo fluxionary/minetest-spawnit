@@ -11,6 +11,7 @@ spawnit._stats = {
 	async_queue_duration = 0,
 	async_callback_duration = 0,
 	spawn_mobs_duration = 0,
+	update_relevant_duration = 0,
 
 	num_spawned = 0,
 	total_spawned = 0,
@@ -44,6 +45,7 @@ function spawnit._get_and_reset_stats()
 	stats.async_queue_usage = spawnit._stats.async_queue_duration / elapsed
 	stats.async_callback_usage = spawnit._stats.async_callback_duration / elapsed
 	stats.spawn_mobs_usage = spawnit._stats.spawn_mobs_duration / elapsed
+	stats.update_relevant_usage = spawnit._stats.update_relevant_duration / elapsed
 
 	stats.async_queue_size = spawnit._find_spawn_poss_queue:size()
 	stats.callback_queue_size = spawnit._callback_queue:size()
@@ -61,14 +63,15 @@ function spawnit._get_and_reset_stats()
 	spawnit._stats.async_queue_duration = 0
 	spawnit._stats.async_callback_duration = 0
 	spawnit._stats.spawn_mobs_duration = 0
+	spawnit._stats.update_relevant_duration = 0
 	spawnit._stats.num_spawned = 0
 	spawnit._stats.total_spawned = stats.total_spawned
-
-	stats.stats_gen_time = get_us_time() - start
 
 	if spawnit.has.mesecons_debug then
 		stats.avg_lag = mesecons_debug.avg_lag
 	end
+
+	stats.stats_gen_time = get_us_time() - start
 
 	return stats
 end

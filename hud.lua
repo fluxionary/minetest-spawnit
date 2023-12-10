@@ -39,6 +39,7 @@ spawnit._hud = futil.define_hud("spawnit:hud", {
 			f("active mapblock analysis usage = %.1fus/s", stats.ao_calc_usage),
 			f("async queue usage = %.1fus/s", stats.async_queue_usage),
 			f("async callback usage = %.1fus/s", stats.async_callback_usage),
+			f("relevant player usage = %.1fus/s", stats.update_relevant_usage),
 			f("spawn mobs usage = %.1fus/s", stats.spawn_mobs_usage),
 			f("#spawned this step = %i", stats.num_spawned),
 			f("#spawned since startup = %i", stats.total_spawned),
