@@ -63,11 +63,17 @@ else
 	})
 
 	spawnit.register_pos_check(function(pos)
-		for _, area in pairs(areas:getAreasAtPos(pos)) do
-			if area.spawnit_enabled == true then
+		local as = areas:getAreasAtPos(pos)
+		if #as == 0 then
+			return true
+		end
+
+		for i = 1, #as do
+			if as[i].spawnit_enabled == true then
 				return true
 			end
 		end
+
 		return false, true
 	end)
 end
