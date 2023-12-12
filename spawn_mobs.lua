@@ -356,10 +356,10 @@ futil.register_globalstep({
 		local successful_spawns = 0
 		local sample
 		if num_spawn_rules <= max_spawn_rules_per_iteration then
+			-- not really a sample, but we do need the indices
 			sample = sample_with_indices(registered_spawns, num_spawn_rules)
 		else
 			sample = sample_with_indices(registered_spawns, max_spawn_rules_per_iteration)
-			table.shuffle(sample)
 			period = period * num_spawn_rules / max_spawn_rules_per_iteration
 		end
 		-- sampling doesn't actually produce something w/ a random order.
@@ -371,7 +371,6 @@ futil.register_globalstep({
 			local def_index, def = unpack(sample[i])
 			local relevant_players = relevant_players_by_def_index[def_index]
 			if relevant_players and should_spawn(def, period, #relevant_players) then
-				spawnit.log("action", "should spawn %s", def.entity_name)
 				if try_spawn_mob(def_index, def) then
 					successful_spawns = successful_spawns + 1
 					if successful_spawns >= s.max_spawn_events_per_iteration then
