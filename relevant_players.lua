@@ -30,6 +30,9 @@ futil.register_globalstep({
 	name = "spawnit:update_relevant_players",
 	period = s.update_relevant_players_period,
 	func = function()
+		if #spawnit.registered_spawns == 0 then
+			return
+		end
 		local start = get_us_time()
 		local players = get_connected_players()
 		local block_hposs = spawnit._block_hposs_by_def[def_index_to_update]
