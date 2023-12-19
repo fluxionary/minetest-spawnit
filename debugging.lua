@@ -368,7 +368,7 @@ function spawnit._register_mob_lifetimer(entity_name)
 				"%s @ %s activates in %s mapblock",
 				self.name or self.object:get_entity_name(),
 				pos_to_string(pos),
-				compare_block_status(pos, "active") and "active" or "INACTIVE"
+				compare_block_status(pos, "active") and "active" or "inactive"
 			)
 		else
 			log("action", "%s activates with no position?!")
@@ -392,7 +392,7 @@ function spawnit._register_mob_lifetimer(entity_name)
 				entity_name,
 				spos,
 				elapsed / 1e6,
-				spawnit.is_active_object_block(pos)
+				spawnit.is_active_object_block(pos) and "in active object region" or "not in active object region"
 			)
 		end
 		if old_on_deactivate then
