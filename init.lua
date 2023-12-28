@@ -5,6 +5,8 @@ afk_api.check_version({ year = 2023, month = 8, day = 7 }) -- get_afk_players
 
 spawnit = fmod.create()
 
+spawnit.enabled = spawnit.settings.enabled_on_boot
+
 spawnit.dofile("util")
 spawnit.dofile("stats")
 

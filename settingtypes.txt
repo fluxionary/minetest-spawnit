@@ -90,3 +90,6 @@ spawnit:track_mob_lifetime (track mob lifetime) bool false
 
 # how long to display spawn waypoint HUDs, in seconds.
 spawnit:spawn_waypoint_timeout (spawn waypoint timeout) float 10 0
+
+# if false, spawnit will be disabled on boot. use the /spawnit_toggle command to switch it.
+spawnit:enabled_on_boot (enabled on boot) bool true

@@ -85,6 +85,9 @@ futil.register_globalstep({
 	name = "spawnit:update_forceloaded_ao",
 	period = s.update_ao_period,
 	func = function()
+		if not spawnit.enabled then
+			return
+		end
 		-- TODO: the way this is written, with spawn position expiry, force-loaded areas will eventually run out of
 		-- TODO: valid positions and won't be re-calculated. possibly positions in force-loaded blocks shouldn't
 		-- TODO: be expired

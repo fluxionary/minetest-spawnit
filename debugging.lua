@@ -547,3 +547,16 @@ function spawnit._add_spawn_waypoint(pos, entity_name)
 		end
 	end
 end
+
+minetest.register_chatcommand("spawnit_toggle", {
+	description = S("toggle all spawnit behavior"),
+	privs = { [s.debug_priv] = true },
+	func = function()
+		spawnit.enabled = not spawnit.enabled
+		if spawnit.enabled then
+			return true, S("spawnit now enabled")
+		else
+			return true, S("spawnit now disabled")
+		end
+	end,
+})

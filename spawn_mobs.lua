@@ -348,6 +348,9 @@ futil.register_globalstep({
 	period = s.spawn_mobs_period,
 	catchup = "single",
 	func = function(period)
+		if not spawnit.enabled then
+			return
+		end
 		local start = get_us_time()
 		local relevant_players_by_def_index = spawnit._relevant_players_by_def_index
 		local registered_spawns = spawnit.registered_spawns

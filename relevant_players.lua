@@ -30,6 +30,9 @@ futil.register_globalstep({
 	name = "spawnit:update_relevant_players",
 	period = s.update_relevant_players_period,
 	func = function()
+		if not spawnit.enabled then
+			return
+		end
 		if #spawnit.registered_spawns == 0 then
 			return
 		end

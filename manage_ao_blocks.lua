@@ -319,6 +319,9 @@ futil.register_globalstep({
 	name = "spawnit:update_player_ao",
 	period = s.update_ao_period,
 	func = function()
+		if not spawnit.enabled then
+			return
+		end
 		local start = get_us_time()
 
 		if s.disable_spawns_near_afk then
