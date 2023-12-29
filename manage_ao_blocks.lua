@@ -137,7 +137,13 @@ local function is_moving_too_fast(obj)
 		attached = obj:get_attach()
 	end
 
-	if obj:get_velocity():length() >= max_speed then
+	local vel = obj:get_velocity()
+	if not vel then
+		-- i'm not sure how this would ever happen, but we got a crash...
+		return true
+	end
+
+	if vel:length() >= max_speed then
 		return true
 	end
 end
@@ -222,19 +228,20 @@ local function pick_a_player(players)
 	-- first, we pick a player to update
 	player_i = (player_i % #players) + 1
 	local player = players[player_i]
-	local j = 0
-	local trials = math.min(s.update_player_ao_trials, #players)
 
 	if has_changed_pos_or_look(player) then
 		return player
 	end
+
+	local j = 0
+	local trials = math.min(s.update_player_ao_trials, #players)
 
 	while j < trials do
 		j = j + 1
 		player_i = (player_i % #players) + 1
 		player = players[player_i]
 
-		if has_changed_pos_or_look(player) then
+		if player:get_pos() and has_changed_pos_or_look(player) then
 			return player
 		end
 	end
@@ -246,6 +253,9 @@ end
 local function update_visibility(player)
 	local player_name = player:get_player_name()
 	local player_pos = player:get_pos()
+	if not player_pos then
+		return
+	end
 	local nearby_block_hpos_set = spawnit._nearby_block_hpos_set_by_player_name[player_name]
 	local new_ao_block_hpos_set = get_ao_block_hpos_set(player)
 	local block_hposs_without_spawn_poss = {} -- which mapblocks need to have spawn positions calculated?
