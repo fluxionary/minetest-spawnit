@@ -57,7 +57,7 @@ function minetest.forceload_free_block(pos, transient)
 		if v <= 1 then
 			tempload_counts[hpos] = nil
 			if not rawget(forceload_counts, hpos) then
-				forceloaded:remove(hpos)
+				forceloaded:discard(hpos)
 			end
 		else
 			tempload_counts[hpos] = v - 1
@@ -67,7 +67,7 @@ function minetest.forceload_free_block(pos, transient)
 		if v <= 1 then
 			forceload_counts[hpos] = nil
 			if not rawget(tempload_counts, hpos) then
-				forceloaded:remove(hpos)
+				forceloaded:discard(hpos)
 			end
 		else
 			forceload_counts[hpos] = v - 1
