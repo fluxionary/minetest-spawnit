@@ -526,7 +526,7 @@ minetest.register_chatcommand("spawnit_toggle_spawn_waypoints", {
 			return false, S("you must be logged in")
 		end
 		if show_waypoints_by_player_name[name] then
-			show_waypoints_by_player_name = nil
+			show_waypoints_by_player_name[name] = nil
 			return true, S("spawn waypoints disabled (may take a few seconds for all to disappear)")
 		end
 		show_waypoints_by_player_name[name] = true
