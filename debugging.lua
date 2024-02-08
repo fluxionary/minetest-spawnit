@@ -3,6 +3,8 @@ local math_floor = math.floor
 local math_max = math.max
 local math_min = math.min
 
+local f = string.format
+
 local v_new = vector.new
 local v_zero = vector.zero
 
@@ -311,7 +313,7 @@ minetest.register_chatcommand("spawnit_show_all_in_block", {
 			return false, "nothing currently spawning at that location"
 		end
 		if type(spawn_poss) == "string" then
-			return false, spawn_poss -- might be calculating
+			return false, f("%s - try again later", spawn_poss) -- might be calculating
 		end
 		local hpos_set = Set()
 		for i = 1, #def_indices do
