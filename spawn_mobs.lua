@@ -16,7 +16,6 @@ local pos_to_string = minetest.pos_to_string
 
 local get_blockpos = futil.vector.get_blockpos
 local in_bounds = futil.math.in_bounds
-local is_player = futil.is_player
 local random_choice = futil.random.choice
 local random_sample = futil.random.sample
 local sample_with_indices = futil.random.sample_with_indices
@@ -235,42 +234,39 @@ end
 
 -- if the definition sets a min or max distance from player, make sure the pos respects those bounds
 local function wrong_distance_to_players(def, pos)
+	if def.min_player_distance < 0 and def.max_player_distance < 0 then
+		return false
+	end
+	local players = minetest.get_connected_players()
 	if def.min_player_distance >= 0 and def.max_player_distance >= 0 then
-		local objs = get_objects_inside_radius(pos, def.max_player_distance)
 		local found_any = false
-		for i = 1, #objs do
-			local obj = objs[i]
-			if is_player(obj) then
-				if pos:distance(obj:get_pos()) <= def.min_player_distance then
-					found_any = false
-					break
-				else
-					found_any = true
-				end
+		for i = 1, #players do
+			local player = players[i]
+			local distance = pos:distance(player:get_pos())
+			if distance <= def.min_player_distance then
+				-- someone too close
+				found_any = false
+				break
+			elseif distance <= def.max_player_distance then
+				found_any = true
 			end
 		end
-		if not found_any then
-			return true
-		end
+		return not found_any
 	elseif def.min_player_distance >= 0 then
-		local objs = get_objects_inside_radius(pos, def.min_player_distance)
-		for i = 1, #objs do
-			if is_player(objs[i]) then
+		for i = 1, #players do
+			local player = players[i]
+			if pos:distance(player:get_pos()) <= def.min_player_distance then
 				return true
 			end
 		end
 	elseif def.max_player_distance >= 0 then
-		local objs = get_objects_inside_radius(pos, def.max_player_distance)
-		local found_any = false
-		for i = 1, #objs do
-			if is_player(objs[i]) then
-				found_any = true
-				break
+		for i = 1, #players do
+			local player = players[i]
+			if pos:distance(player:get_pos()) <= def.max_player_distance then
+				return false
 			end
 		end
-		if not found_any then
-			return true
-		end
+		return true
 	end
 
 	return false
