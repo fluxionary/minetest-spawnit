@@ -36,6 +36,7 @@ spawnit._hud = futil.define_hud("spawnit:hud", {
 			f("#mapblocks being processed = %i", stats.calculating_blocks),
 			f("#async_queue (size) = %i", stats.async_queue_size),
 			f("#callback_queue (size) = %i", stats.callback_queue_size),
+			f("#async results since last HUD update = %i", stats.async_results),
 			f("active mapblock analysis usage = %.1fus/s", stats.ao_calc_usage),
 			f("async queue usage = %.1fus/s", stats.async_queue_usage),
 			f("async callback usage = %.1fus/s", stats.async_callback_usage),

@@ -12,6 +12,7 @@ spawnit._stats = {
 	async_callback_duration = 0,
 	spawn_mobs_duration = 0,
 	update_relevant_duration = 0,
+	async_results = 0,
 
 	num_spawned = 0,
 	total_spawned = 0,
@@ -49,6 +50,7 @@ function spawnit._get_and_reset_stats()
 
 	stats.async_queue_size = spawnit._find_spawn_poss_queue:size()
 	stats.callback_queue_size = spawnit._callback_queue:size()
+	stats.async_results = spawnit._stats.async_results
 
 	if s.track_memory_usage then
 		stats.all_mt_lua_memory_usage = collectgarbage("count")
@@ -65,6 +67,7 @@ function spawnit._get_and_reset_stats()
 	spawnit._stats.spawn_mobs_duration = 0
 	spawnit._stats.update_relevant_duration = 0
 	spawnit._stats.num_spawned = 0
+	spawnit._stats.async_results = 0
 	spawnit._stats.total_spawned = stats.total_spawned
 
 	if spawnit.has.mesecons_debug then

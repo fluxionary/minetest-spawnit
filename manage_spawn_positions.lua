@@ -74,6 +74,7 @@ end
 
 local function make_callback(block_hpos)
 	return function(hpos_set_by_def)
+		spawnit._stats.async_results = spawnit._stats.async_results + 1
 		if spawnit._spawn_poss_by_block_hpos[block_hpos] ~= CALCULATING then
 			-- if this already got computed somehow, or removed, leave it alone.
 			return
