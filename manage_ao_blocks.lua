@@ -113,7 +113,7 @@ local function discard_all_player_poss(player)
 	local player_name = player:get_player_name()
 	local nearby_block_hpos_set = spawnit._nearby_block_hpos_set_by_player_name[player_name]
 	if not nearby_block_hpos_set then
-		-- TODO: this should not be possible if the user is logged in, but has occurred in the wildS
+		-- TODO: this should not be possible if the user is logged in, but has occurred in the wild
 		return
 	end
 	for hpos in nearby_block_hpos_set:iterate() do
