@@ -93,6 +93,10 @@ end
 local function discard_all_visible_blocks(player)
 	local player_name = player:get_player_name()
 	local nearby_block_hpos_set = spawnit._nearby_block_hpos_set_by_player_name[player_name]
+	if not nearby_block_hpos_set then
+		-- TODO: this should not be possible if the user is logged in, but has occurred in the wild
+		return
+	end
 	for hpos in nearby_block_hpos_set:iterate() do
 		local visibility = rawget(spawnit._visibility_by_block_hpos, hpos) -- rawget cuz otherwise creates an empty set
 		if visibility then
@@ -108,6 +112,10 @@ local function discard_all_player_poss(player)
 	discard_all_visible_blocks(player)
 	local player_name = player:get_player_name()
 	local nearby_block_hpos_set = spawnit._nearby_block_hpos_set_by_player_name[player_name]
+	if not nearby_block_hpos_set then
+		-- TODO: this should not be possible if the user is logged in, but has occurred in the wildS
+		return
+	end
 	for hpos in nearby_block_hpos_set:iterate() do
 		local nearby = spawnit._nearby_players_by_block_hpos[hpos]
 		nearby:discard(player_name)
